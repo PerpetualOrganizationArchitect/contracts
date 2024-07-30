@@ -18,7 +18,8 @@ contract DirectDemocracyTokenTest is Test {
 
     function setUp() public {
         nftMembership = new NFTMembershipMock();
-        directDemocracyToken = new DirectDemocracyToken("Direct Democracy Token", "DDT", address(nftMembership), allowedRoleNames);
+        directDemocracyToken =
+            new DirectDemocracyToken("Direct Democracy Token", "DDT", address(nftMembership), allowedRoleNames);
 
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "memberWithPermission");
         NFTMembershipMock(address(nftMembership)).setMemberType(memberWithPermission, "memberWithPermission");
