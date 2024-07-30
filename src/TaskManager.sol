@@ -9,7 +9,7 @@ interface INFTMembership4 {
     function mintDefaultNFT(address newUser) external;
 }
 
-interface IParticipationToken {
+interface IParticipationToken is IERC20 {
     function mint(address to, uint256 amount) external;
     function setTaskManagerAddress(address _taskManagerAddress) external;
 }
