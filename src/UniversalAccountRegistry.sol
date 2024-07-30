@@ -14,7 +14,6 @@ contract AccountManager {
     // Event for username change
     event UsernameChanged(address indexed accountAddress, string newUsername);
 
-
     // Function to register a new account with a unique username
     function registerAccount(string memory username) public {
         require(bytes(username).length > 0, "Username cannot be empty");

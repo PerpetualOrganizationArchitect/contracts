@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface INFTMembership2 {
@@ -13,7 +12,6 @@ interface ITreasury {
     function setVotingContract(address _votingContract) external;
     function withdrawEther(address payable _to, uint256 _amount) external;
 }
-
 
 contract DirectDemocracyVoting {
     IERC20 public DirectDemocracyToken;
@@ -41,21 +39,37 @@ contract DirectDemocracyVoting {
 
     Proposal[] private proposals;
 
-    event NewProposal(uint256 indexed proposalId, string name, string description, uint256 timeInMinutes, uint256 creationTimestamp,  uint256 transferTriggerOptionIndex, address transferRecipient, uint256 transferAmount, bool transferEnabled, address transferToken);
+    event NewProposal(
+        uint256 indexed proposalId,
+        string name,
+        string description,
+        uint256 timeInMinutes,
+        uint256 creationTimestamp,
+        uint256 transferTriggerOptionIndex,
+        address transferRecipient,
+        uint256 transferAmount,
+        bool transferEnabled,
+        address transferToken
+    );
     event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex);
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
 
-
     mapping(string => bool) private allowedRoles;
 
-    constructor(address _ddToken, address _nftMembership, string[] memory _allowedRoleNames , address _treasuryAddress, uint256 _quorumPercentage) {
+    constructor(
+        address _ddToken,
+        address _nftMembership,
+        string[] memory _allowedRoleNames,
+        address _treasuryAddress,
+        uint256 _quorumPercentage
+    ) {
         quorumPercentage = _quorumPercentage;
         DirectDemocracyToken = IERC20(_ddToken);
-        nftMembership = INFTMembership2(_nftMembership); 
+        nftMembership = INFTMembership2(_nftMembership);
         treasury = ITreasury(_treasuryAddress);
-        
-        for (uint i = 0; i < _allowedRoleNames.length; i++) {
+
+        for (uint256 i = 0; i < _allowedRoleNames.length; i++) {
             allowedRoles[_allowedRoleNames[i]] = true;
         }
     }
@@ -66,21 +80,24 @@ contract DirectDemocracyVoting {
         _;
     }
 
-
     modifier whenNotExpired(uint256 _proposalId) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
-        require(block.timestamp <= proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting time expired");
+        require(
+            block.timestamp <= proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting time expired"
+        );
         _;
     }
 
     modifier whenExpired(uint256 _proposalId) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
-        require(block.timestamp > proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting is not yet closed");
+        require(
+            block.timestamp > proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes,
+            "Voting is not yet closed"
+        );
         _;
     }
-
 
     function createProposal(
         string memory _name,
@@ -92,7 +109,6 @@ contract DirectDemocracyVoting {
         uint256 _transferAmount,
         bool _transferEnabled,
         address _transferToken
-
     ) external canCreateProposal {
         Proposal storage newProposal = proposals.push();
         newProposal.totalVotes = 0;
@@ -103,7 +119,18 @@ contract DirectDemocracyVoting {
         newProposal.transferAmount = _transferAmount;
 
         uint256 proposalId = proposals.length - 1;
-        emit NewProposal(proposalId, _name, _description, _timeInMinutes, block.timestamp, _transferTriggerOptionIndex, _transferRecipient, _transferAmount, _transferEnabled, _transferToken);
+        emit NewProposal(
+            proposalId,
+            _name,
+            _description,
+            _timeInMinutes,
+            block.timestamp,
+            _transferTriggerOptionIndex,
+            _transferRecipient,
+            _transferAmount,
+            _transferEnabled,
+            _transferToken
+        );
 
         for (uint256 i = 0; i < _optionNames.length; i++) {
             newProposal.options.push(PollOption(0));
@@ -111,18 +138,13 @@ contract DirectDemocracyVoting {
         }
     }
 
-    function vote(
-        uint256 _proposalId,
-        address _voter,
-        uint256 _optionIndex
-    ) external whenNotExpired(_proposalId) {
+    function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
         uint256 balance = DirectDemocracyToken.balanceOf(_voter);
         require(balance > 0, "No democracy tokens");
 
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         require(!proposal.hasVoted[_voter], "Already voted");
-
 
         proposal.hasVoted[_voter] = true;
         proposal.totalVotes += 1;
@@ -133,31 +155,34 @@ contract DirectDemocracyVoting {
 
     function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
-        
-
 
         (uint256 winningOptionIndex, bool hasValidWinner) = getWinner(_proposalId);
 
-        if (hasValidWinner && proposals[_proposalId].transferEnabled && winningOptionIndex == proposals[_proposalId].transferTriggerOptionIndex) {
-            if(proposals[_proposalId].transferToken == address(0x0000000000000000000000000000000000001010)) {
+        if (
+            hasValidWinner && proposals[_proposalId].transferEnabled
+                && winningOptionIndex == proposals[_proposalId].transferTriggerOptionIndex
+        ) {
+            if (proposals[_proposalId].transferToken == address(0x0000000000000000000000000000000000001010)) {
                 treasury.withdrawEther(proposals[_proposalId].transferRecipient, proposals[_proposalId].transferAmount);
             } else {
-                treasury.sendTokens(address(proposals[_proposalId].transferToken), proposals[_proposalId].transferRecipient, proposals[_proposalId].transferAmount);
+                treasury.sendTokens(
+                    address(proposals[_proposalId].transferToken),
+                    proposals[_proposalId].transferRecipient,
+                    proposals[_proposalId].transferAmount
+                );
             }
         }
 
         emit WinnerAnnounced(_proposalId, winningOptionIndex, hasValidWinner);
 
-
         return (winningOptionIndex, hasValidWinner);
     }
-
 
     function getWinner(uint256 _proposalId) public view returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         uint256 highestVotes = 0;
-        uint256 winningOptionIndex = 0;  
+        uint256 winningOptionIndex = 0;
         bool hasValidWinner = false;
         uint256 quorumThreshold = (proposal.totalVotes * quorumPercentage);
 
@@ -166,7 +191,7 @@ contract DirectDemocracyVoting {
             if (proposal.options[i].votes > highestVotes) {
                 highestVotes = proposal.options[i].votes;
                 winningOptionIndex = i;
-                hasValidWinner = highestVotes*100 >= quorumThreshold;
+                hasValidWinner = highestVotes * 100 >= quorumThreshold;
             }
         }
 
@@ -179,11 +204,7 @@ contract DirectDemocracyVoting {
         return proposal.options.length;
     }
 
-    function getOptionVotes(uint256 _proposalId, uint256 _optionIndex)
-        public
-        view
-        returns (uint256 votes)
-    {
+    function getOptionVotes(uint256 _proposalId, uint256 _optionIndex) public view returns (uint256 votes) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         require(_optionIndex < proposal.options.length, "Invalid option index");
@@ -191,16 +212,20 @@ contract DirectDemocracyVoting {
     }
 
     // Getter function to access a specific proposal by its ID
-    function getProposal(uint256 _proposalId) public view returns (
-        uint256 totalVotes,
-        uint256 timeInMinutes,
-        uint256 creationTimestamp,
-        uint256 transferTriggerOptionIndex,
-        address payable transferRecipient,
-        uint256 transferAmount,
-        bool transferEnabled,
-        address transferToken
-    ) {
+    function getProposal(uint256 _proposalId)
+        public
+        view
+        returns (
+            uint256 totalVotes,
+            uint256 timeInMinutes,
+            uint256 creationTimestamp,
+            uint256 transferTriggerOptionIndex,
+            address payable transferRecipient,
+            uint256 transferAmount,
+            bool transferEnabled,
+            address transferToken
+        )
+    {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
 

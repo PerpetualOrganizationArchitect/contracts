@@ -56,25 +56,26 @@ contract ParticipationVotingTest is Test {
         // set owner as member
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
 
-        deal(address(participationToken), address(treasury), 1000 * 10**18);
+        deal(address(participationToken), address(treasury), 1000 * 10 ** 18);
     }
 
     function testCreateProposal() public {
         vm.prank(owner);
         participationVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
-        (uint256 totalVotes, uint256 timeInMinutes, uint256 creationTimestamp, uint256 transferTriggerOptionIndex, address payable transferRecipient, uint256 transferAmount, bool transferEnabled, address transferToken) = participationVoting.getProposal(0);
-        
+        (
+            uint256 totalVotes,
+            uint256 timeInMinutes,
+            uint256 creationTimestamp,
+            uint256 transferTriggerOptionIndex,
+            address payable transferRecipient,
+            uint256 transferAmount,
+            bool transferEnabled,
+            address transferToken
+        ) = participationVoting.getProposal(0);
+
         assertEq(timeInMinutes, 60);
         assertEq(totalVotes, 0);
         assertEq(creationTimestamp > 0, true);
@@ -88,15 +89,7 @@ contract ParticipationVotingTest is Test {
     function testVote() public {
         vm.prank(owner);
         participationVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
         vm.prank(voter1);
@@ -105,16 +98,7 @@ contract ParticipationVotingTest is Test {
         (uint256 votes) = participationVoting.getOptionVotes(0, 0);
         assertEq(votes, 100);
 
-        (
-            uint256 totalVotes,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            
-        ) = participationVoting.getProposal(0);
+        (uint256 totalVotes,,,,,,,) = participationVoting.getProposal(0);
         assertEq(totalVotes, 100);
     }
 
@@ -148,22 +132,14 @@ contract ParticipationVotingTest is Test {
     function testQuadraticVoting() public {
         vm.prank(owner);
         participationVotingQuadratic.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
         vm.prank(voter1);
         participationVotingQuadratic.vote(0, voter1, 0);
 
         (uint256 votes) = participationVotingQuadratic.getOptionVotes(0, 0);
-        
+
         // square root of 100 is 10
         uint256 expectedQuadraticVotes = 10;
         assertEq(votes, expectedQuadraticVotes);

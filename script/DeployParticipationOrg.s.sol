@@ -6,8 +6,8 @@ import "../src/MasterDeployFactory.sol";
 contract DeployParticipationOrg {
     function run(address _masterFactory) external {
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
-            memberTypeNames: new string[] (2) ,
-            executivePermissionNames: new string[] (1),
+            memberTypeNames: new string[](2),
+            executivePermissionNames: new string[](1),
             POname: "ParticipationVotingPO",
             quadraticVotingEnabled: false,
             democracyVoteWeight: 0,
@@ -17,7 +17,7 @@ contract DeployParticipationOrg {
             logoURL: "QmLogoHash",
             infoIPFSHash: "QmTestHash",
             votingControlType: "Participation",
-            contractNames: new string[] (8) ,
+            contractNames: new string[](8),
             quorumPercentageDD: 0,
             quorumPercentagePV: 50,
             username: "testuser"
@@ -37,6 +37,5 @@ contract DeployParticipationOrg {
 
         MasterFactory masterFactory = MasterFactory(_masterFactory);
         masterFactory.deployAll(params);
-
     }
 }

@@ -23,7 +23,7 @@ import {DeployDirectDemocracyOrg} from "../script/DeployDirectDemocracyOrg.s.sol
 import {DeployParticipationOrg} from "../script/DeployParticipationOrg.s.sol";
 import {DeployHybridOrg} from "../script/DeployHybridOrg.s.sol";
 
-contract TestAllOrgTypes is  Test {
+contract TestAllOrgTypes is Test {
     MasterFactory masterFactory;
     HybridVoting hybridVoting;
 
@@ -32,7 +32,6 @@ contract TestAllOrgTypes is  Test {
         address masterFactoryAddress = deployMasterFactory.run();
         masterFactory = MasterFactory(masterFactoryAddress);
     }
-
 
     function getRegistryCreatedAddress(Vm.Log[] memory logs, bytes32 eventSignature) internal pure returns (address) {
         for (uint256 i = 0; i < logs.length; i++) {
@@ -52,16 +51,16 @@ contract TestAllOrgTypes is  Test {
         vm.recordLogs();
         deployDirectDemocracyOrg.run(address(masterFactory));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        
-
-
 
         // Ensure there are logs to process
         assertTrue(logs.length > 0, "No logs found after deployment");
 
         // Check if the deployment log length matches the expected number of logs
         assertEq(logs.length, 20, "Unexpected number of logs for Direct Democracy deployment");
-        assertEq(logs[0].topics[0], keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])"));
+        assertEq(
+            logs[0].topics[0],
+            keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])")
+        );
     }
 
     function testDeployParticipationVoting() public {
@@ -76,8 +75,10 @@ contract TestAllOrgTypes is  Test {
 
         // Check if the deployment log length matches the expected number of logs
         assertEq(logs.length, 21, "Unexpected number of logs for Participation Voting deployment");
-        assertEq(logs[0].topics[0], keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])"));
-
+        assertEq(
+            logs[0].topics[0],
+            keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])")
+        );
     }
 
     function testDeployHybridVoting() public {
@@ -92,6 +93,9 @@ contract TestAllOrgTypes is  Test {
 
         // Check if the deployment log length matches the expected number of logs
         assertEq(logs.length, 21, "Unexpected number of logs for Hybrid Voting deployment");
-        assertEq(logs[0].topics[0], keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])"));
+        assertEq(
+            logs[0].topics[0],
+            keccak256("DeployParamsLog(string[],string[],string,bool,uint256,uint256,bool,bool,string,string,string[])")
+        );
     }
 }

@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./HybridVoting.sol"; 
+import "./HybridVoting.sol";
 
 contract HybridVotingFactory {
-    
-    event HybridVotingContractCreated(address indexed creator, address hybridVotingAddress, string POname, uint256 quorumPercentage, uint256 DDpercent, uint256 PTpercent);
+    event HybridVotingContractCreated(
+        address indexed creator,
+        address hybridVotingAddress,
+        string POname,
+        uint256 quorumPercentage,
+        uint256 DDpercent,
+        uint256 PTpercent
+    );
 
-
-    
     function createHybridVoting(
         address _ParticipationToken,
         address _DemocracyToken,
@@ -20,7 +24,7 @@ contract HybridVotingFactory {
         address _treasuryAddress,
         string memory POname,
         uint256 _quorumPercentage
-    ) public  returns (address){
+    ) public returns (address) {
         HybridVoting newHybridVoting = new HybridVoting(
             _ParticipationToken,
             _DemocracyToken,
@@ -32,9 +36,14 @@ contract HybridVotingFactory {
             _treasuryAddress,
             _quorumPercentage
         );
-        emit HybridVotingContractCreated(msg.sender, address(newHybridVoting), POname, _quorumPercentage, _democracyVoteWeight, _participationVoteWeight);
+        emit HybridVotingContractCreated(
+            msg.sender,
+            address(newHybridVoting),
+            POname,
+            _quorumPercentage,
+            _democracyVoteWeight,
+            _participationVoteWeight
+        );
         return address(newHybridVoting);
     }
-
-    
 }

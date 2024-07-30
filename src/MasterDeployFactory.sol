@@ -14,7 +14,6 @@ import "./TaskManagerFactory.sol";
 import "./QuickJoinFactory.sol";
 
 contract MasterFactory {
-
     event DeployParamsLog(
         string[] memberTypeNames,
         string[] executivePermissionNames,
@@ -102,9 +101,11 @@ contract MasterFactory {
 
         address[] memory contractAddresses = new address[](8); // Increased size to include QuickJoin address
 
-        deployStandardContracts(contractAddresses, params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname);
+        deployStandardContracts(
+            contractAddresses, params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname
+        );
         deployConditionalContracts(contractAddresses, params);
-        
+
         address votingControlAddress = determineVotingControlAddress(params.votingControlType, contractAddresses);
 
         // Set TaskManager in participation token contract
@@ -114,9 +115,18 @@ contract MasterFactory {
         ITreasury treasury = ITreasury(contractAddresses[3]);
         treasury.setVotingContract(votingControlAddress);
 
-        contractAddresses[7] = quickJoinFactory.createQuickJoin(contractAddresses[0], contractAddresses[1], accountManagerAddress, params.POname, address(this));
+        contractAddresses[7] = quickJoinFactory.createQuickJoin(
+            contractAddresses[0], contractAddresses[1], accountManagerAddress, params.POname, address(this)
+        );
 
-        registryFactory.createRegistry(votingControlAddress, params.contractNames, contractAddresses, params.POname, params.logoURL, params.infoIPFSHash);
+        registryFactory.createRegistry(
+            votingControlAddress,
+            params.contractNames,
+            contractAddresses,
+            params.POname,
+            params.logoURL,
+            params.infoIPFSHash
+        );
 
         IQuickJoin quickJoin = IQuickJoin(contractAddresses[7]);
 
@@ -125,13 +135,12 @@ contract MasterFactory {
 
         INFTMembership4 nftMembership = INFTMembership4(contractAddresses[0]);
         nftMembership.setQuickJoin(contractAddresses[7]);
-        
+
         if (bytes(params.username).length > 0) {
             quickJoin.quickJoinNoUserMasterDeploy(params.username, msg.sender);
         } else {
             quickJoin.quickJoinWithUserMasterDeploy(msg.sender);
         }
-       
     }
 
     // Splitting deployment functions for clarity and reducing stack depth
@@ -149,7 +158,9 @@ contract MasterFactory {
         string[] memory executivePermissionNames,
         string memory POname
     ) internal returns (address) {
-        return directDemocracyTokenFactory.createDirectDemocracyToken("DirectDemocracyToken", "DDT", nftAddress, executivePermissionNames, POname);
+        return directDemocracyTokenFactory.createDirectDemocracyToken(
+            "DirectDemocracyToken", "DDT", nftAddress, executivePermissionNames, POname
+        );
     }
 
     function deployParticipationToken(string memory POname) internal returns (address) {
@@ -172,32 +183,45 @@ contract MasterFactory {
         contractAddresses[2] = deployParticipationToken(POname);
         contractAddresses[3] = deployTreasury(POname);
     }
-    
-    function deployConditionalContracts(
-        address[] memory contractAddresses,
-        DeployParams memory params
-    ) internal {
-        contractAddresses[5] = params.participationVotingEnabled 
-            ? deployPartcipationVoting(contractAddresses, params.executivePermissionNames, params.quadraticVotingEnabled, params.POname, params.quorumPercentagePV) 
+
+    function deployConditionalContracts(address[] memory contractAddresses, DeployParams memory params) internal {
+        contractAddresses[5] = params.participationVotingEnabled
+            ? deployPartcipationVoting(
+                contractAddresses,
+                params.executivePermissionNames,
+                params.quadraticVotingEnabled,
+                params.POname,
+                params.quorumPercentagePV
+            )
             : address(0);
-        contractAddresses[4] = deployDemocracyVoting(contractAddresses, params.executivePermissionNames, params.POname, params.quorumPercentageDD);
-        contractAddresses[5] = params.hybridVotingEnabled 
-            ? deployHybridVoting(contractAddresses, params)
-            : address(0);
-        if(!params.hybridVotingEnabled && !params.participationVotingEnabled) {
-             contractAddresses[5] = address(0);
+        contractAddresses[4] = deployDemocracyVoting(
+            contractAddresses, params.executivePermissionNames, params.POname, params.quorumPercentageDD
+        );
+        contractAddresses[5] = params.hybridVotingEnabled ? deployHybridVoting(contractAddresses, params) : address(0);
+        if (!params.hybridVotingEnabled && !params.participationVotingEnabled) {
+            contractAddresses[5] = address(0);
         }
-        contractAddresses[6] = taskManagerFactory.createTaskManager(contractAddresses[2], contractAddresses[0], params.executivePermissionNames, params.POname);
+        contractAddresses[6] = taskManagerFactory.createTaskManager(
+            contractAddresses[2], contractAddresses[0], params.executivePermissionNames, params.POname
+        );
     }
 
     function deployPartcipationVoting(
         address[] memory contractAddresses,
         string[] memory _allowedRoleNames,
         bool _quadraticVotingEnabled,
-        string memory POname, 
+        string memory POname,
         uint256 quorumPercentagePV
     ) internal returns (address) {
-        return participationVotingFactory.createParticipationVoting(contractAddresses[2], contractAddresses[0], _allowedRoleNames, _quadraticVotingEnabled, contractAddresses[3], POname, quorumPercentagePV);
+        return participationVotingFactory.createParticipationVoting(
+            contractAddresses[2],
+            contractAddresses[0],
+            _allowedRoleNames,
+            _quadraticVotingEnabled,
+            contractAddresses[3],
+            POname,
+            quorumPercentagePV
+        );
     }
 
     function deployDemocracyVoting(
@@ -206,13 +230,20 @@ contract MasterFactory {
         string memory POname,
         uint256 quorumPercentageDD
     ) internal returns (address) {
-        return directDemocracyVotingFactory.createDirectDemocracyVoting(contractAddresses[1], contractAddresses[0], _allowedRoleNames, contractAddresses[3], POname, quorumPercentageDD);
+        return directDemocracyVotingFactory.createDirectDemocracyVoting(
+            contractAddresses[1],
+            contractAddresses[0],
+            _allowedRoleNames,
+            contractAddresses[3],
+            POname,
+            quorumPercentageDD
+        );
     }
 
-    function deployHybridVoting(
-        address[] memory contractAddresses,
-        DeployParams memory params
-    ) internal returns (address) {
+    function deployHybridVoting(address[] memory contractAddresses, DeployParams memory params)
+        internal
+        returns (address)
+    {
         return hybridVotingFactory.createHybridVoting(
             contractAddresses[2],
             contractAddresses[1],
@@ -226,11 +257,12 @@ contract MasterFactory {
             params.quorumPercentagePV
         );
     }
-   
-    function determineVotingControlAddress(
-        string memory votingControlType, 
-        address[] memory contractAddresses
-    ) internal pure returns (address) {
+
+    function determineVotingControlAddress(string memory votingControlType, address[] memory contractAddresses)
+        internal
+        pure
+        returns (address)
+    {
         if (keccak256(abi.encodePacked(votingControlType)) == keccak256(abi.encodePacked("Hybrid"))) {
             return contractAddresses[5];
         } else if (keccak256(abi.encodePacked(votingControlType)) == keccak256(abi.encodePacked("DirectDemocracy"))) {
@@ -243,7 +275,7 @@ contract MasterFactory {
     }
 }
 
-interface  IQuickJoin {
+interface IQuickJoin {
     function quickJoinNoUserMasterDeploy(string memory userName, address newUser) external;
     function quickJoinWithUserMasterDeploy(address newUser) external;
 }
@@ -251,4 +283,3 @@ interface  IQuickJoin {
 interface IDirectDemocracyToken2 {
     function setQuickJoin(address _quickJoin) external;
 }
-   

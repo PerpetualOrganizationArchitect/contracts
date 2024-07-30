@@ -3,15 +3,14 @@ pragma solidity ^0.8.20;
 
 import "../src/MasterDeployFactory.sol";
 
-
 contract DeployDirectDemocracyOrg {
     MasterFactory masterFactory;
 
     function run(address _masterFactory) external {
         masterFactory = MasterFactory(_masterFactory);
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
-            memberTypeNames: new string[] (2) ,
-            executivePermissionNames: new string [] (1),
+            memberTypeNames: new string[](2),
+            executivePermissionNames: new string[](1),
             POname: "DirectDemocracyPO",
             quadraticVotingEnabled: false,
             democracyVoteWeight: 100,
@@ -21,7 +20,7 @@ contract DeployDirectDemocracyOrg {
             logoURL: "QmLogoHash",
             infoIPFSHash: "QmTestHash",
             votingControlType: "DirectDemocracy",
-            contractNames: new string[] (8),
+            contractNames: new string[](8),
             quorumPercentageDD: 50,
             quorumPercentagePV: 0,
             username: "testuser"

@@ -23,7 +23,12 @@ contract QuickJoin {
 
     address masterDeployAddress;
 
-    constructor(address _membershipNFTAddress, address _directDemocracyTokenAddress, address _accountManagerAddress, address _masterDeployAddress) {
+    constructor(
+        address _membershipNFTAddress,
+        address _directDemocracyTokenAddress,
+        address _accountManagerAddress,
+        address _masterDeployAddress
+    ) {
         membershipNFT = IMembershipNFT(_membershipNFTAddress);
         directDemocracyToken = IDirectDemocracyToken(_directDemocracyTokenAddress);
         accountManager = IAccountManager(_accountManagerAddress);
@@ -40,7 +45,6 @@ contract QuickJoin {
 
         // Check if the user has an existing username
         if (bytes(existingUsername).length == 0) {
-            
             accountManager.registerAccountQuickJoin(userName, msg.sender);
         }
         membershipNFT.mintDefaultNFT(msg.sender);
@@ -52,22 +56,19 @@ contract QuickJoin {
         directDemocracyToken.mint(msg.sender);
     }
 
-    function quickJoinNoUserMasterDeploy(string memory userName, address newUser) public onlyMasterDeploy() {
+    function quickJoinNoUserMasterDeploy(string memory userName, address newUser) public onlyMasterDeploy {
         string memory existingUsername = accountManager.getUsername(newUser);
 
         // Check if the user has an existing username
         if (bytes(existingUsername).length == 0) {
-            
             accountManager.registerAccountQuickJoin(userName, newUser);
         }
         membershipNFT.mintDefaultNFT(newUser);
         directDemocracyToken.mint(newUser);
     }
 
-    function quickJoinWithUserMasterDeploy(address newUser) public onlyMasterDeploy() {
+    function quickJoinWithUserMasterDeploy(address newUser) public onlyMasterDeploy {
         membershipNFT.mintDefaultNFT(newUser);
         directDemocracyToken.mint(newUser);
     }
-
-    
 }

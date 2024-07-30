@@ -22,7 +22,6 @@ contract TaskManager {
         address claimer;
     }
 
-
     IParticipationToken public token;
     INFTMembership4 public nftMembership;
 
@@ -61,7 +60,7 @@ contract TaskManager {
         _;
     }
 
-    function createTask(uint256 _payout, string calldata ipfsHash, string memory projectName) external canTask{
+    function createTask(uint256 _payout, string calldata ipfsHash, string memory projectName) external canTask {
         uint256 taskId = nextTaskId++;
         tasks[taskId] = Task(taskId, _payout, false, address(0));
         emit TaskCreated(taskId, _payout, ipfsHash, projectName);
@@ -97,15 +96,13 @@ contract TaskManager {
         require(task.claimer == address(0), "Task already claimed");
         task.claimer = msg.sender;
         emit TaskClaimed(_taskId, msg.sender);
-        
     }
 
     function createProject(string calldata projectName) external canTask {
         emit ProjectCreated(projectName);
     }
 
-    function deleteProject(string calldata projectName) external canTask  {
+    function deleteProject(string calldata projectName) external canTask {
         emit ProjectDeleted(projectName);
     }
-
 }

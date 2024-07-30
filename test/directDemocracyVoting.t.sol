@@ -29,11 +29,7 @@ contract DirectDemocracyVotingTest is Test {
         treasury = new TreasuryMock();
 
         directDemocracyVoting = new DirectDemocracyVoting(
-            address(democracyToken),
-            address(nftMembership),
-            allowedRoleNames,
-            address(treasury),
-            quorumPercentage
+            address(democracyToken), address(nftMembership), allowedRoleNames, address(treasury), quorumPercentage
         );
 
         // Set initial balances
@@ -44,21 +40,13 @@ contract DirectDemocracyVotingTest is Test {
         // set owner as member
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
 
-        deal(address(democracyToken), address(treasury), 1000 * 10**18);
+        deal(address(democracyToken), address(treasury), 1000 * 10 ** 18);
     }
 
     function testCreateProposal() public {
         vm.prank(owner);
         directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
         (
@@ -85,15 +73,7 @@ contract DirectDemocracyVotingTest is Test {
     function testVote() public {
         vm.prank(owner);
         directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
         vm.prank(voter1);
@@ -102,7 +82,7 @@ contract DirectDemocracyVotingTest is Test {
         uint256 votes = directDemocracyVoting.getOptionVotes(0, 0);
         assertEq(votes, 1);
 
-       (uint256 totalVotes,, , , , , ,) = directDemocracyVoting.getProposal(0);
+        (uint256 totalVotes,,,,,,,) = directDemocracyVoting.getProposal(0);
         assertEq(totalVotes, 1);
     }
 
@@ -140,15 +120,7 @@ contract DirectDemocracyVotingTest is Test {
         vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
 
         directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
     }
 }

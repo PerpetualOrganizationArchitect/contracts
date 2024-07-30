@@ -16,15 +16,14 @@ contract Registry {
     event VotingControlAddressSet(address newAddress);
     event Initialized(address VotingControlAddress, string[] contractNames, address[] contractAddresses);
 
-
     modifier onlyVoting() {
         require(msg.sender == VotingControlAddress, "Not authorized");
         _;
     }
 
     constructor(
-        address _VotingControlAddress, 
-        string[] memory contractNames, 
+        address _VotingControlAddress,
+        string[] memory contractNames,
         address[] memory contractAddresses,
         string memory name,
         string memory logo,
@@ -33,16 +32,16 @@ contract Registry {
         POname = name;
         infoHash = hashInfo;
         logoURL = logo;
-        require(contractNames.length == contractAddresses.length, "Contract names and addresses must be of the same length");
+        require(
+            contractNames.length == contractAddresses.length, "Contract names and addresses must be of the same length"
+        );
         VotingControlAddress = _VotingControlAddress;
-        for (uint i = 0; i < contractNames.length; i++) {
+        for (uint256 i = 0; i < contractNames.length; i++) {
             contracts[contractNames[i]] = contractAddresses[i];
         }
-
     }
 
-    function setVotingControlAddress(address _address) external onlyVoting{
-        
+    function setVotingControlAddress(address _address) external onlyVoting {
         VotingControlAddress = _address;
         emit VotingControlAddressSet(_address);
     }
@@ -51,8 +50,7 @@ contract Registry {
         return contracts[name];
     }
 
-    function addContract(string memory name, address contractAddress) onlyVoting external {
-        
+    function addContract(string memory name, address contractAddress) external onlyVoting {
         contracts[name] = contractAddress;
         emit ContractAdded(name, contractAddress);
     }
@@ -61,8 +59,4 @@ contract Registry {
         contracts[name] = newAddress;
         emit ContractUpgraded(name, newAddress);
     }
-
-
-
-
 }

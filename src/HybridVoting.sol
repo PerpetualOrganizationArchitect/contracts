@@ -3,18 +3,16 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
-//importnaant vote weights arent percerntages but integers 
+//importnaant vote weights arent percerntages but integers
 
 interface INFTMembership3 {
     function checkMemberTypeByAddress(address user) external view returns (string memory);
 }
 
-interface ITreasury2{
+interface ITreasury2 {
     function sendTokens(address _token, address _to, uint256 _amount) external;
     function withdrawEther(address payable _to, uint256 _amount) external;
 }
-
 
 contract HybridVoting {
     IERC20 public ParticipationToken;
@@ -45,12 +43,28 @@ contract HybridVoting {
 
     Proposal[] private proposals;
 
-
     uint256 public democracyVoteWeight;
     uint256 public participationVoteWeight;
 
-    event NewProposal(uint256 indexed proposalId, string name, string description, uint256 timeInMinutes, uint256 creationTimestamp,  uint256 transferTriggerOptionIndex, address transferRecipient, uint256 transferAmount, bool transferEnabled, address transferToken);
-    event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex, uint256 voteWeightPT, uint256 voteWeightDDT);
+    event NewProposal(
+        uint256 indexed proposalId,
+        string name,
+        string description,
+        uint256 timeInMinutes,
+        uint256 creationTimestamp,
+        uint256 transferTriggerOptionIndex,
+        address transferRecipient,
+        uint256 transferAmount,
+        bool transferEnabled,
+        address transferToken
+    );
+    event Voted(
+        uint256 indexed proposalId,
+        address indexed voter,
+        uint256 optionIndex,
+        uint256 voteWeightPT,
+        uint256 voteWeightDDT
+    );
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
 
@@ -58,7 +72,17 @@ contract HybridVoting {
 
     bool public quadraticVotingEnabled;
 
-    constructor(address _ParticipationToken, address _DemocracyToken, address _nftMembership, string[] memory _allowedRoleNames, bool _quadraticVotingEnabled, uint256 _democracyVoteWeight, uint256 _participationVoteWeight, address _treasuryAddress, uint256 _quorumPercentage) {
+    constructor(
+        address _ParticipationToken,
+        address _DemocracyToken,
+        address _nftMembership,
+        string[] memory _allowedRoleNames,
+        bool _quadraticVotingEnabled,
+        uint256 _democracyVoteWeight,
+        uint256 _participationVoteWeight,
+        address _treasuryAddress,
+        uint256 _quorumPercentage
+    ) {
         quorumPercentage = _quorumPercentage;
         ParticipationToken = IERC20(_ParticipationToken);
         DirectDemocracyToken = IERC20(_DemocracyToken);
@@ -73,7 +97,6 @@ contract HybridVoting {
         democracyVoteWeight = _democracyVoteWeight;
         participationVoteWeight = _participationVoteWeight;
         treasury = ITreasury2(_treasuryAddress);
-
     }
 
     modifier canCreateProposal() {
@@ -85,14 +108,19 @@ contract HybridVoting {
     modifier whenNotExpired(uint256 _proposalId) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
-        require(block.timestamp <= proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting time expired");
+        require(
+            block.timestamp <= proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting time expired"
+        );
         _;
     }
 
     modifier whenExpired(uint256 _proposalId) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
-        require(block.timestamp > proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes, "Voting is not yet closed");
+        require(
+            block.timestamp > proposal.creationTimestamp + proposal.timeInMinutes * 1 minutes,
+            "Voting is not yet closed"
+        );
         _;
     }
 
@@ -107,7 +135,6 @@ contract HybridVoting {
         bool _transferEnabled,
         address _transferToken
     ) external canCreateProposal {
-
         Proposal storage newProposal = proposals.push();
         newProposal.totalVotesPT = 0;
         newProposal.totalVotesDDT = 0;
@@ -120,20 +147,26 @@ contract HybridVoting {
         newProposal.transferToken = _transferToken;
 
         uint256 proposalId = proposals.length - 1;
-        emit NewProposal(proposalId, _name, _description, _timeInMinutes, block.timestamp, _transferTriggerOptionIndex, _transferRecipient, _transferAmount, _transferEnabled, _transferToken);
+        emit NewProposal(
+            proposalId,
+            _name,
+            _description,
+            _timeInMinutes,
+            block.timestamp,
+            _transferTriggerOptionIndex,
+            _transferRecipient,
+            _transferAmount,
+            _transferEnabled,
+            _transferToken
+        );
 
         for (uint256 i = 0; i < _optionNames.length; i++) {
-            newProposal.options.push(PollOption(0,0));
+            newProposal.options.push(PollOption(0, 0));
             emit PollOptionNames(proposalId, i, _optionNames[i]);
         }
     }
 
-    function vote(
-        uint256 _proposalId,
-        address _voter,
-        uint256 _optionIndex
-    ) external whenNotExpired(_proposalId) {
-
+    function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
         uint256 balanceDDT = DirectDemocracyToken.balanceOf(_voter);
         require(balanceDDT > 0, "No democracy tokens");
         uint256 balancePT = ParticipationToken.balanceOf(_voter);
@@ -157,7 +190,7 @@ contract HybridVoting {
         return sqrt(_balance);
     }
 
-    // Helper function to approximate square root 
+    // Helper function to approximate square root
     function sqrt(uint256 x) internal pure returns (uint256 y) {
         uint256 z = (x + 1) / 2;
         y = x;
@@ -167,7 +200,6 @@ contract HybridVoting {
         }
     }
 
-
     function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
 
@@ -175,11 +207,18 @@ contract HybridVoting {
         (uint256 winningOptionIndex, bool hasValidWinner) = getWinner(_proposalId);
 
         // Check if there's a valid winner and if the specific winning option triggers a transfer
-        if (hasValidWinner && proposals[_proposalId].transferEnabled && winningOptionIndex == proposals[_proposalId].transferTriggerOptionIndex) {
+        if (
+            hasValidWinner && proposals[_proposalId].transferEnabled
+                && winningOptionIndex == proposals[_proposalId].transferTriggerOptionIndex
+        ) {
             if (proposals[_proposalId].transferToken == address(0x0000000000000000000000000000000000001010)) {
                 treasury.withdrawEther(proposals[_proposalId].transferRecipient, proposals[_proposalId].transferAmount);
             } else {
-                treasury.sendTokens(address(proposals[_proposalId].transferToken), proposals[_proposalId].transferRecipient, proposals[_proposalId].transferAmount);
+                treasury.sendTokens(
+                    address(proposals[_proposalId].transferToken),
+                    proposals[_proposalId].transferRecipient,
+                    proposals[_proposalId].transferAmount
+                );
             }
         }
 
@@ -199,7 +238,7 @@ contract HybridVoting {
         uint256 totalVotesPT = proposal.totalVotesPT;
         uint256 totalVotesDDT = proposal.totalVotesDDT;
 
-        uint256 scalingFactor = 1e9; 
+        uint256 scalingFactor = 1e9;
 
         uint256 totalWeightedVotes = 0;
         uint256[] memory optionWeights = new uint256[](proposal.options.length);
@@ -209,8 +248,10 @@ contract HybridVoting {
             uint256 votesDDT = proposal.options[i].votesDDT;
 
             // Properly calculate the weighted votes for each option checking for 0
-            uint256 weightedVotesPT = totalVotesPT > 0 ? (votesPT * participationVoteWeight * scalingFactor) / totalVotesPT : 0;
-            uint256 weightedVotesDDT = totalVotesDDT > 0 ? (votesDDT * democracyVoteWeight * scalingFactor) / totalVotesDDT : 0;
+            uint256 weightedVotesPT =
+                totalVotesPT > 0 ? (votesPT * participationVoteWeight * scalingFactor) / totalVotesPT : 0;
+            uint256 weightedVotesDDT =
+                totalVotesDDT > 0 ? (votesDDT * democracyVoteWeight * scalingFactor) / totalVotesDDT : 0;
 
             uint256 totalVotesWeighted = weightedVotesPT + weightedVotesDDT;
             optionWeights[i] = totalVotesWeighted;
@@ -235,12 +276,8 @@ contract HybridVoting {
             hasValidWinner = true;
         }
 
-
         return (winningOptionIndex, hasValidWinner);
     }
-
-
-
 
     function getOptionsCount(uint256 _proposalId) public view returns (uint256) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
@@ -260,17 +297,21 @@ contract HybridVoting {
     }
 
     // Getter function to access a specific proposal by its ID
-    function getProposal(uint256 _proposalId) public view returns (
-        uint256 totalVotesPT,
-        uint256 totalVotesDDT,
-        uint256 timeInMinutes,
-        uint256 creationTimestamp,
-        uint256 transferTriggerOptionIndex,
-        address payable transferRecipient,
-        uint256 transferAmount,
-        bool transferEnabled,
-        address transferToken
-    ) {
+    function getProposal(uint256 _proposalId)
+        public
+        view
+        returns (
+            uint256 totalVotesPT,
+            uint256 totalVotesDDT,
+            uint256 timeInMinutes,
+            uint256 creationTimestamp,
+            uint256 transferTriggerOptionIndex,
+            address payable transferRecipient,
+            uint256 transferAmount,
+            bool transferEnabled,
+            address transferToken
+        )
+    {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
 
@@ -288,7 +329,11 @@ contract HybridVoting {
     }
 
     // Getter function to access the vote count for a specific option of a proposal
-    function getProposalOptionVotes(uint256 _proposalId, uint256 _optionIndex) public view returns (uint256 votesPT, uint256 votesDDT) {
+    function getProposalOptionVotes(uint256 _proposalId, uint256 _optionIndex)
+        public
+        view
+        returns (uint256 votesPT, uint256 votesDDT)
+    {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         require(_optionIndex < proposal.options.length, "Invalid option index");
@@ -301,7 +346,4 @@ contract HybridVoting {
     function getProposalsCount() public view returns (uint256) {
         return proposals.length;
     }
-
-
-
 }

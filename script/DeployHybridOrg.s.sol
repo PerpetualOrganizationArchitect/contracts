@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import "../src/MasterDeployFactory.sol";
 
 contract DeployHybridOrg {
-    function run(address _masterFactory) external  {
+    function run(address _masterFactory) external {
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
-            memberTypeNames: new string[] (2) ,
-            executivePermissionNames: new string[] (1),
+            memberTypeNames: new string[](2),
+            executivePermissionNames: new string[](1),
             POname: "HybridVotingPO",
             quadraticVotingEnabled: false,
             democracyVoteWeight: 50,
@@ -17,7 +17,7 @@ contract DeployHybridOrg {
             logoURL: "QmLogoHash",
             infoIPFSHash: "QmTestHash",
             votingControlType: "Hybrid",
-            contractNames: new string[] (8) ,
+            contractNames: new string[](8),
             quorumPercentageDD: 50,
             quorumPercentagePV: 50,
             username: "testuser"
@@ -37,6 +37,5 @@ contract DeployHybridOrg {
 
         MasterFactory masterFactory = MasterFactory(_masterFactory);
         masterFactory.deployAll(params);
-        
     }
 }

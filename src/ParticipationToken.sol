@@ -4,17 +4,14 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
 contract ParticipationToken is ERC20, Ownable {
-
     address private taskManagerAddress;
 
     event Mint(address indexed to, uint256 amount);
     event TaskManagerAddressSet(address taskManagerAddress);
 
-
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        taskManagerAddress= address(0);
+        taskManagerAddress = address(0);
     }
 
     modifier onlyTaskManager() {
@@ -27,18 +24,13 @@ contract ParticipationToken is ERC20, Ownable {
         emit Mint(to, amount);
     }
 
-    function setTaskManagerAddress(address _taskManagerAddress) external  {
+    function setTaskManagerAddress(address _taskManagerAddress) external {
         require(taskManagerAddress == address(0), "Task manager address already set.");
         taskManagerAddress = _taskManagerAddress;
         emit TaskManagerAddressSet(_taskManagerAddress);
     }
 
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal override {
+    function _transfer(address sender, address recipient, uint256 amount) internal override {
         revert("Transfers are disabled.");
     }
 }
-

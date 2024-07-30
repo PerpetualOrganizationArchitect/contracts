@@ -10,6 +10,7 @@ interface IERC202 {
 
 contract Treasury {
     address public votingContract;
+
     event TokensSent(address indexed token, address indexed to, uint256 amount);
     event TokensReceived(address indexed token, address indexed from, uint256 amount);
     event EtherWithdrawn(address indexed to, uint256 amount);
@@ -20,11 +21,10 @@ contract Treasury {
         votingContract = address(0);
     }
 
-    function setVotingContract(address _votingContract) external  {
+    function setVotingContract(address _votingContract) external {
         require(votingContract == address(0), "Voting contract already set");
         votingContract = _votingContract;
         emit VotingContractSet(_votingContract);
-
     }
 
     modifier onlyVotingContract() {
@@ -45,12 +45,12 @@ contract Treasury {
 
     function withdrawEther(address payable _to, uint256 _amount) external onlyVotingContract {
         require(address(this).balance >= _amount, "Insufficient Ether balance");
-        (bool sent, ) = _to.call{value: _amount}("");
+        (bool sent,) = _to.call{value: _amount}("");
         require(sent, "Failed to send Ether");
         emit EtherWithdrawn(_to, _amount);
     }
 
     receive() external payable {
-         emit EtherReceived(msg.sender, msg.value);
+        emit EtherReceived(msg.sender, msg.value);
     }
 }
