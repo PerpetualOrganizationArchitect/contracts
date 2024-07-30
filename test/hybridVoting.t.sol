@@ -20,9 +20,9 @@ contract HybridVotingTest is Test {
     address public voter3 = address(4);
     address public treasuryAddress = address(5);
 
-    uint256 public democracyVoteWeight = 75;
-    uint256 public participationVoteWeight = 25;
-    uint256 public quorumPercentage = 50;
+    uint256 public democracyVoteWeight = 73;
+    uint256 public participationVoteWeight = 27;
+    uint256 public quorumPercentage = 51;
 
     string[] public allowedRoleNames = ["member"];
     string[] public optionNames = ["Option1", "Option2"];
@@ -191,7 +191,7 @@ contract HybridVotingTest is Test {
         assertEq(totalVotesPT, expectedQuadraticVotes);
         assertEq(totalVotesDDT, 100);
     }
-    // function to test the hybrid voting calculations
+    // function to test the hybrid voting calculations in scenrrio where both PT and DDT are used and option 0 barely wins
     function testHybridVotingCalculations() public {
 
         // Create a proposal
@@ -254,9 +254,27 @@ contract HybridVotingTest is Test {
         assertEq(hasValidWinner, true);
 
     }
+    // test non member cant create proposal
+    function testNonMemberCannotCreateProposal() public {
+        address nonMember = address(6); // Address that is not set as a member
+        vm.prank(nonMember); // Use non-member account to call the function
+
+        vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
+
+        hybridVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0)
+        );
+    }
+
 }
-
-
 
 // Mock Contracts
 contract ERC20Mock is IERC20 {

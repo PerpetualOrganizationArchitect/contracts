@@ -131,7 +131,7 @@ contract DirectDemocracyVoting {
         emit Voted(_proposalId, _voter, _optionIndex);
     }
 
-    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) {
+    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         
 
@@ -147,6 +147,9 @@ contract DirectDemocracyVoting {
         }
 
         emit WinnerAnnounced(_proposalId, winningOptionIndex, hasValidWinner);
+
+
+        return (winningOptionIndex, hasValidWinner);
     }
 
 
@@ -184,6 +187,47 @@ contract DirectDemocracyVoting {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         require(_optionIndex < proposal.options.length, "Invalid option index");
-        return proposal.options[_optionIndex].votes;
+        return (proposal.options[_optionIndex].votes);
+    }
+
+    // Getter function to access a specific proposal by its ID
+    function getProposal(uint256 _proposalId) public view returns (
+        uint256 totalVotes,
+        uint256 timeInMinutes,
+        uint256 creationTimestamp,
+        uint256 transferTriggerOptionIndex,
+        address payable transferRecipient,
+        uint256 transferAmount,
+        bool transferEnabled,
+        address transferToken
+    ) {
+        require(_proposalId < proposals.length, "Invalid proposal ID");
+        Proposal storage proposal = proposals[_proposalId];
+
+        return (
+            proposal.totalVotes,
+            proposal.timeInMinutes,
+            proposal.creationTimestamp,
+            proposal.transferTriggerOptionIndex,
+            proposal.transferRecipient,
+            proposal.transferAmount,
+            proposal.transferEnabled,
+            proposal.transferToken
+        );
+    }
+
+    // Getter function to access the vote count for a specific option of a proposal
+    function getProposalOptionVotes(uint256 _proposalId, uint256 _optionIndex) public view returns (uint256 votes) {
+        require(_proposalId < proposals.length, "Invalid proposal ID");
+        Proposal storage proposal = proposals[_proposalId];
+        require(_optionIndex < proposal.options.length, "Invalid option index");
+
+        PollOption storage option = proposal.options[_optionIndex];
+        return (option.votes);
+    }
+
+    // Getter function to get the number of proposals
+    function getProposalsCount() public view returns (uint256) {
+        return proposals.length;
     }
 }

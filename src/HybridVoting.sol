@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "forge-std/console.sol";
 
 
 //importnaant vote weights arent percerntages but integers 
@@ -206,15 +205,12 @@ contract HybridVoting {
         uint256[] memory optionWeights = new uint256[](proposal.options.length);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {
-            console.log("Option index: ", i);
             uint256 votesPT = proposal.options[i].votesPT;
             uint256 votesDDT = proposal.options[i].votesDDT;
 
             // Properly calculate the weighted votes for each option checking for 0
             uint256 weightedVotesPT = totalVotesPT > 0 ? (votesPT * participationVoteWeight * scalingFactor) / totalVotesPT : 0;
-            console.log("weightedVotesPT: ", weightedVotesPT);
             uint256 weightedVotesDDT = totalVotesDDT > 0 ? (votesDDT * democracyVoteWeight * scalingFactor) / totalVotesDDT : 0;
-            console.log("weightedVotesDDT: ", weightedVotesDDT);
 
             uint256 totalVotesWeighted = weightedVotesPT + weightedVotesDDT;
             optionWeights[i] = totalVotesWeighted;
@@ -223,7 +219,6 @@ contract HybridVoting {
 
         // Calculate the quorum threshold as a percentage of total weighted votes
         uint256 quorumThreshold = (totalWeightedVotes * quorumPercentage) / 100;
-        console.log("Quorum threshold: ", quorumThreshold);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {
             uint256 totalVotesWeighted = optionWeights[i];
