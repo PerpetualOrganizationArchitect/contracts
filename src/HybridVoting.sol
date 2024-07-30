@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "forge-std/console.sol";
+
 
 //importnaant vote weights arent percerntages but integers 
 
@@ -152,7 +154,7 @@ contract HybridVoting {
         emit Voted(_proposalId, _voter, _optionIndex, voteWeightPT, balanceDDT);
     }
 
-    function calculateQuadraticVoteWeight(uint256 _balance) internal pure returns (uint256) {
+    function calculateQuadraticVoteWeight(uint256 _balance) public pure returns (uint256) {
         return sqrt(_balance);
     }
 
@@ -167,7 +169,7 @@ contract HybridVoting {
     }
 
 
-    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) {
+    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
 
         // Retrieve the winning option index and the validity of the win
@@ -184,6 +186,7 @@ contract HybridVoting {
 
         // Emitting the winner announcement with additional detail about the win validity
         emit WinnerAnnounced(_proposalId, winningOptionIndex, hasValidWinner);
+        return (winningOptionIndex, hasValidWinner);
     }
 
     function getWinner(uint256 _proposalId) internal view returns (uint256, bool) {
@@ -203,12 +206,15 @@ contract HybridVoting {
         uint256[] memory optionWeights = new uint256[](proposal.options.length);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {
+            console.log("Option index: ", i);
             uint256 votesPT = proposal.options[i].votesPT;
             uint256 votesDDT = proposal.options[i].votesDDT;
 
             // Properly calculate the weighted votes for each option checking for 0
             uint256 weightedVotesPT = totalVotesPT > 0 ? (votesPT * participationVoteWeight * scalingFactor) / totalVotesPT : 0;
+            console.log("weightedVotesPT: ", weightedVotesPT);
             uint256 weightedVotesDDT = totalVotesDDT > 0 ? (votesDDT * democracyVoteWeight * scalingFactor) / totalVotesDDT : 0;
+            console.log("weightedVotesDDT: ", weightedVotesDDT);
 
             uint256 totalVotesWeighted = weightedVotesPT + weightedVotesDDT;
             optionWeights[i] = totalVotesWeighted;
@@ -217,6 +223,7 @@ contract HybridVoting {
 
         // Calculate the quorum threshold as a percentage of total weighted votes
         uint256 quorumThreshold = (totalWeightedVotes * quorumPercentage) / 100;
+        console.log("Quorum threshold: ", quorumThreshold);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {
             uint256 totalVotesWeighted = optionWeights[i];
@@ -225,9 +232,14 @@ contract HybridVoting {
             if (totalVotesWeighted > winningVotes) {
                 winningVotes = totalVotesWeighted;
                 winningOptionIndex = i;
-                hasValidWinner = totalWeightedVotes >= quorumThreshold; 
             }
         }
+
+        // Check if the winning option has reached the quorum threshold
+        if (winningVotes >= quorumThreshold) {
+            hasValidWinner = true;
+        }
+
 
         return (winningOptionIndex, hasValidWinner);
     }
@@ -251,6 +263,50 @@ contract HybridVoting {
         require(_optionIndex < proposal.options.length, "Invalid option index");
         return (proposal.options[_optionIndex].votesPT, proposal.options[_optionIndex].votesDDT);
     }
+
+    // Getter function to access a specific proposal by its ID
+    function getProposal(uint256 _proposalId) public view returns (
+        uint256 totalVotesPT,
+        uint256 totalVotesDDT,
+        uint256 timeInMinutes,
+        uint256 creationTimestamp,
+        uint256 transferTriggerOptionIndex,
+        address payable transferRecipient,
+        uint256 transferAmount,
+        bool transferEnabled,
+        address transferToken
+    ) {
+        require(_proposalId < proposals.length, "Invalid proposal ID");
+        Proposal storage proposal = proposals[_proposalId];
+
+        return (
+            proposal.totalVotesPT,
+            proposal.totalVotesDDT,
+            proposal.timeInMinutes,
+            proposal.creationTimestamp,
+            proposal.transferTriggerOptionIndex,
+            proposal.transferRecipient,
+            proposal.transferAmount,
+            proposal.transferEnabled,
+            proposal.transferToken
+        );
+    }
+
+    // Getter function to access the vote count for a specific option of a proposal
+    function getProposalOptionVotes(uint256 _proposalId, uint256 _optionIndex) public view returns (uint256 votesPT, uint256 votesDDT) {
+        require(_proposalId < proposals.length, "Invalid proposal ID");
+        Proposal storage proposal = proposals[_proposalId];
+        require(_optionIndex < proposal.options.length, "Invalid option index");
+
+        PollOption storage option = proposal.options[_optionIndex];
+        return (option.votesPT, option.votesDDT);
+    }
+
+    // Getter function to get the number of proposals
+    function getProposalsCount() public view returns (uint256) {
+        return proposals.length;
+    }
+
 
 
 }

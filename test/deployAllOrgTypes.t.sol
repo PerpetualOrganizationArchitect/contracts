@@ -52,9 +52,6 @@ contract TestAllOrgTypes is  Test {
         vm.recordLogs();
         deployDirectDemocracyOrg.run(address(masterFactory));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-
-        address newRegistryAddress = getRegistryCreatedAddress(logs, keccak256("RegistryCreated(address,string,string,address,string[],address[],string)"));
-        console.log("newRegistryAddress: ", newRegistryAddress);
         
 
 
