@@ -151,7 +151,7 @@ contract ParticipationVoting {
     }
 
 
-    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) {
+    function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
 
         // Retrieve the winning option index and the validity of the win
@@ -168,6 +168,8 @@ contract ParticipationVoting {
 
         // Emitting the winner announcement with additional detail about the win validity
         emit WinnerAnnounced(_proposalId, winningOptionIndex, hasValidWinner);
+
+        return (winningOptionIndex, hasValidWinner);
     }
 
 
@@ -192,11 +194,35 @@ contract ParticipationVoting {
         return (winningOptionIndex, hasValidWinner);
     }
 
-
     function getOptionsCount(uint256 _proposalId) public view returns (uint256) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
         return proposal.options.length;
+    }
+
+    function getProposal(uint256 _proposalId) public view returns (
+        uint256 totalVotes,
+        uint256 timeInMinutes,
+        uint256 creationTimestamp,
+        uint256 transferTriggerOptionIndex,
+        address payable transferRecipient,
+        uint256 transferAmount,
+        bool transferEnabled,
+        address transferToken
+    ) {
+        require(_proposalId < proposals.length, "Invalid proposal ID");
+        Proposal storage proposal = proposals[_proposalId];
+
+        return (
+            proposal.totalVotes,
+            proposal.timeInMinutes,
+            proposal.creationTimestamp,
+            proposal.transferTriggerOptionIndex,
+            proposal.transferRecipient,
+            proposal.transferAmount,
+            proposal.transferEnabled,
+            proposal.transferToken
+        );
     }
 
     function getOptionVotes(uint256 _proposalId, uint256 _optionIndex)
@@ -210,6 +236,10 @@ contract ParticipationVoting {
         return proposal.options[_optionIndex].votes;
     }
 
+    // Getter function to get the number of proposals
+    function getProposalsCount() public view returns (uint256) {
+        return proposals.length;
+    }
 
 
 }
