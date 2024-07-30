@@ -11,11 +11,11 @@ contract TaskManagerTest is Test {
     INFTMembership4 public nftMembership;
 
     address public owner = address(1);
-    address public member1 = address(2);
-    address public member2 = address(3);
+    address public memberWithPermission = address(2);
+    address public memberWithoutPermission = address(3);
     address public nonMember = address(4);
 
-    string[] public allowedRoleNames = ["member"];
+    string[] public allowedRoleNames = ["memberWithPermission"];
 
     function setUp() public {
         participationToken = new ParticipationTokenMock();
@@ -23,9 +23,9 @@ contract TaskManagerTest is Test {
 
         taskManager = new TaskManager(address(participationToken), address(nftMembership), allowedRoleNames);
 
-        NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
-        NFTMembershipMock(address(nftMembership)).setMemberType(member1, "member");
-        NFTMembershipMock(address(nftMembership)).setMemberType(member2, "member");
+        NFTMembershipMock(address(nftMembership)).setMemberType(owner, "memberWithPermission");
+        NFTMembershipMock(address(nftMembership)).setMemberType(memberWithPermission, "memberWithPermission");
+        NFTMembershipMock(address(nftMembership)).setMemberType(memberWithoutPermission, "memberWithoutPermission");
     }
 
     function testCreateTask() public {
@@ -54,21 +54,21 @@ contract TaskManagerTest is Test {
         vm.prank(owner);
         taskManager.createTask(100, "ipfsHash1", "project1");
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.claimTask(0);
 
         (,,, address claimer) = taskManager.tasks(0);
-        assertEq(claimer, member1);
+        assertEq(claimer, memberWithPermission);
     }
 
     function testSubmitTask() public {
         vm.prank(owner);
         taskManager.createTask(100, "ipfsHash1", "project1");
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.claimTask(0);
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.submitTask(0, "ipfsHash2");
     }
 
@@ -76,10 +76,10 @@ contract TaskManagerTest is Test {
         vm.prank(owner);
         taskManager.createTask(100, "ipfsHash1", "project1");
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.claimTask(0);
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.submitTask(0, "ipfsHash2");
 
         vm.prank(owner);
@@ -88,7 +88,7 @@ contract TaskManagerTest is Test {
         (,, bool isCompleted,) = taskManager.tasks(0);
         assertEq(isCompleted, true);
 
-        assertEq(participationToken.balanceOf(member1), 100);
+        assertEq(participationToken.balanceOf(memberWithPermission), 100);
     }
 
     function testCreateProject() public {
@@ -117,7 +117,7 @@ contract TaskManagerTest is Test {
         vm.prank(owner);
         taskManager.createTask(100, "ipfsHash1", "project1");
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.claimTask(0);
 
         vm.prank(nonMember);
@@ -144,10 +144,10 @@ contract TaskManagerTest is Test {
         vm.prank(owner);
         taskManager.createTask(100, "ipfsHash1", "project1");
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.claimTask(0);
 
-        vm.prank(member1);
+        vm.prank(memberWithPermission);
         taskManager.submitTask(0, "ipfsHash2");
 
         vm.prank(nonMember);
@@ -168,6 +168,59 @@ contract TaskManagerTest is Test {
         vm.prank(nonMember);
         vm.expectRevert("Not authorized to create task");
         taskManager.deleteProject("project1");
+    }
+
+    // Additional tests for members without permission
+    function testMemberWithoutPermissionCanClaimTask() public {
+        vm.prank(owner);
+        taskManager.createTask(100, "ipfsHash1", "project1");
+
+        vm.prank(memberWithoutPermission);
+        taskManager.claimTask(0);
+
+        (,,, address claimer) = taskManager.tasks(0);
+        assertEq(claimer, memberWithoutPermission);
+    }
+
+    function testMemberWithoutPermissionCanSubmitTask() public {
+        vm.prank(owner);
+        taskManager.createTask(100, "ipfsHash1", "project1");
+
+        vm.prank(memberWithoutPermission);
+        taskManager.claimTask(0);
+
+        vm.prank(memberWithoutPermission);
+        taskManager.submitTask(0, "ipfsHash2");
+    }
+
+    function testMemberWithoutPermissionCannotCreateTask() public {
+        vm.prank(memberWithoutPermission);
+        vm.expectRevert("Not authorized to create task");
+        taskManager.createTask(100, "ipfsHash1", "project1");
+    }
+
+    function testMemberWithoutPermissionCannotUpdateTask() public {
+        vm.prank(owner);
+        taskManager.createTask(100, "ipfsHash1", "project1");
+
+        vm.prank(memberWithoutPermission);
+        vm.expectRevert("Not authorized to create task");
+        taskManager.updateTask(0, 200, "ipfsHash2");
+    }
+
+    function testMemberWithoutPermissionCannotCompleteTask() public {
+        vm.prank(owner);
+        taskManager.createTask(100, "ipfsHash1", "project1");
+
+        vm.prank(memberWithoutPermission);
+        taskManager.claimTask(0);
+
+        vm.prank(memberWithoutPermission);
+        taskManager.submitTask(0, "ipfsHash2");
+
+        vm.prank(memberWithoutPermission);
+        vm.expectRevert("Not authorized to create task");
+        taskManager.completeTask(0);
     }
 }
 

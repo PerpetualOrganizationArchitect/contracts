@@ -37,5 +37,4 @@ contract ParticipationToken is ERC20, Ownable {
     function getTaskManagerAddress() external view returns (address) {
         return taskManagerAddress;
     }
-
 }

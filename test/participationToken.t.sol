@@ -28,7 +28,6 @@ contract ParticipationTokenTest is Test {
     }
 
     function testMint() public {
-
         vm.prank(taskManager);
         participationToken.mint(user, 1000);
 
@@ -36,14 +35,12 @@ contract ParticipationTokenTest is Test {
     }
 
     function testMintFailNotTaskManager() public {
-
         vm.prank(owner);
         vm.expectRevert("Only the task manager can call this function.");
         participationToken.mint(user, 1000);
     }
 
     function testTransferDisabled() public {
-
         vm.prank(taskManager);
         participationToken.mint(user, 1000);
 
@@ -53,7 +50,6 @@ contract ParticipationTokenTest is Test {
     }
 
     function testTransferFromDisabled() public {
-
         vm.prank(taskManager);
         participationToken.mint(user, 1000);
 
