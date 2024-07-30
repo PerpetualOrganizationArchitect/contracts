@@ -33,4 +33,9 @@ contract ParticipationToken is ERC20, Ownable {
     function _transfer(address sender, address recipient, uint256 amount) internal override {
         revert("Transfers are disabled.");
     }
+
+    function getTaskManagerAddress() external view returns (address) {
+        return taskManagerAddress;
+    }
+
 }
