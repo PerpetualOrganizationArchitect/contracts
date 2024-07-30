@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "forge-std/console.sol";
 
 contract NFTMembership is ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
@@ -85,7 +86,7 @@ contract NFTMembership is ERC721URIStorage, Ownable {
     function mintDefaultNFT(address newUser) public onlyQuickJoin {
         string memory tokenURI = defaultImageURL;
         uint256 tokenId = _nextTokenId++;
-        _mint(msg.sender, tokenId);
+        _mint(newUser, tokenId);
         _setTokenURI(tokenId, tokenURI);
         if (firstMint) {
             memberTypeOf[newUser] = "Executive";
@@ -95,5 +96,9 @@ contract NFTMembership is ERC721URIStorage, Ownable {
             memberTypeOf[newUser] = DEFAULT_MEMBER_TYPE;
             emit mintedNFT(newUser, DEFAULT_MEMBER_TYPE, tokenURI);
         }
+    }
+
+    function getQuickJoin() public returns (address) {
+        return quickJoin;
     }
 }
