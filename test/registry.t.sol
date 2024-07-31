@@ -16,12 +16,7 @@ contract RegistryTest is Test {
 
     function setUp() public {
         registry = new Registry(
-            votingControl,
-            contractNames,
-            contractAddresses,
-            initialPOname,
-            initialLogoURL,
-            initialInfoHash
+            votingControl, contractNames, contractAddresses, initialPOname, initialLogoURL, initialInfoHash
         );
     }
 

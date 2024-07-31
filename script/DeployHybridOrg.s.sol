@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "../src/MasterDeployFactory.sol";
 
 contract DeployHybridOrg {
-    function run(address _masterFactory) external returns(address) {
+    function run(address _masterFactory) external returns (address) {
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
             executivePermissionNames: new string[](1),

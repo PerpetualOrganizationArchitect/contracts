@@ -99,7 +99,7 @@ contract MasterFactory {
             params.contractNames
         );
 
-        address[] memory contractAddresses = new address[](8); 
+        address[] memory contractAddresses = new address[](8);
 
         deployStandardContracts(
             contractAddresses, params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "../src/MasterDeployFactory.sol";
 
 contract DeployParticipationOrg {
-    function run(address _masterFactory) external returns(address) {
+    function run(address _masterFactory) external returns (address) {
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
             executivePermissionNames: new string[](1),
@@ -31,7 +31,7 @@ contract DeployParticipationOrg {
         params.contractNames[2] = "ParticipationToken";
         params.contractNames[3] = "Treasury";
         params.contractNames[4] = "DirectDemocracyVoting";
-        params.contractNames[5] = "HybridVoting";
+        params.contractNames[5] = "ParticipationVoting";
         params.contractNames[6] = "TaskManager";
         params.contractNames[7] = "QuickJoin";
 
