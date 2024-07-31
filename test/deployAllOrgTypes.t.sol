@@ -33,18 +33,6 @@ contract TestAllOrgTypes is Test {
         masterFactory = MasterFactory(masterFactoryAddress);
     }
 
-    function getRegistryCreatedAddress(Vm.Log[] memory logs, bytes32 eventSignature) internal pure returns (address) {
-        for (uint256 i = 0; i < logs.length; i++) {
-            console.log("Log index: ", i);
-            console.logBytes32(logs[i].topics[0]);
-            if (logs[i].topics[0] == eventSignature) {
-                console.log("RegistryCreated event found");
-                return address(uint160(uint256(logs[i].topics[0])));
-            }
-        }
-        revert("RegistryCreated event not found in logs");
-    }
-
     function testDeployDirectDemocracy() public {
         DeployDirectDemocracyOrg deployDirectDemocracyOrg = new DeployDirectDemocracyOrg();
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "../src/MasterDeployFactory.sol";
 
 contract DeployParticipationOrg {
-    function run(address _masterFactory) external {
+    function run(address _masterFactory) external returns(address) {
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
             executivePermissionNames: new string[](1),
@@ -37,5 +37,8 @@ contract DeployParticipationOrg {
 
         MasterFactory masterFactory = MasterFactory(_masterFactory);
         masterFactory.deployAll(params);
+
+        address registryAddress = masterFactory.deployAll(params);
+        return registryAddress;
     }
 }

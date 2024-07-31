@@ -84,7 +84,7 @@ contract MasterFactory {
         accountManagerAddress = _accountManagerAddress;
     }
 
-    function deployAll(DeployParams memory params) public {
+    function deployAll(DeployParams memory params) public returns (address) {
         emit DeployParamsLog(
             params.memberTypeNames,
             params.executivePermissionNames,
@@ -99,7 +99,7 @@ contract MasterFactory {
             params.contractNames
         );
 
-        address[] memory contractAddresses = new address[](8); // Increased size to include QuickJoin address
+        address[] memory contractAddresses = new address[](8); 
 
         deployStandardContracts(
             contractAddresses, params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname
@@ -119,7 +119,8 @@ contract MasterFactory {
             contractAddresses[0], contractAddresses[1], accountManagerAddress, params.POname, address(this)
         );
 
-        registryFactory.createRegistry(
+        // Create the registry and store its address
+        address registryAddress = registryFactory.createRegistry(
             votingControlAddress,
             params.contractNames,
             contractAddresses,
@@ -127,7 +128,6 @@ contract MasterFactory {
             params.logoURL,
             params.infoIPFSHash
         );
-
         IQuickJoin quickJoin = IQuickJoin(contractAddresses[7]);
 
         IDirectDemocracyToken2 directDemocracyToken = IDirectDemocracyToken2(contractAddresses[1]);
@@ -141,6 +141,8 @@ contract MasterFactory {
         } else {
             quickJoin.quickJoinWithUserMasterDeploy(msg.sender);
         }
+
+        return registryAddress;
     }
 
     // Splitting deployment functions for clarity and reducing stack depth

@@ -6,7 +6,7 @@ import "../src/MasterDeployFactory.sol";
 contract DeployDirectDemocracyOrg {
     MasterFactory masterFactory;
 
-    function run(address _masterFactory) external {
+    function run(address _masterFactory) external returns (address) {
         masterFactory = MasterFactory(_masterFactory);
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
@@ -38,6 +38,7 @@ contract DeployDirectDemocracyOrg {
         params.contractNames[6] = "TaskManager";
         params.contractNames[7] = "QuickJoin";
 
-        masterFactory.deployAll(params);
+        address registryAddress = masterFactory.deployAll(params);
+        return registryAddress;
     }
 }
