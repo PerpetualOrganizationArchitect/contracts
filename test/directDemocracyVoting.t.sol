@@ -4,13 +4,14 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/DirectDemocracyVoting.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../src/ElectionContract.sol";
 
 contract DirectDemocracyVotingTest is Test {
     DirectDemocracyVoting public directDemocracyVoting;
-
     IERC20 public democracyToken;
     INFTMembership2 public nftMembership;
     ITreasury public treasury;
+    ElectionContract public elections;
 
     address public owner = address(1);
     address public voter1 = address(2);
@@ -19,18 +20,26 @@ contract DirectDemocracyVotingTest is Test {
     address public treasuryAddress = address(5);
 
     uint256 public quorumPercentage = 51;
-
     string[] public allowedRoleNames = ["member"];
     string[] public optionNames = ["Option1", "Option2"];
+    address[] public candidateAddresses;
+    string[] public candidateNames;
 
     function setUp() public {
         democracyToken = IERC20(address(new ERC20Mock("Democracy Token", "DDT")));
         nftMembership = new NFTMembershipMock();
         treasury = new TreasuryMock();
+        elections = new ElectionContract(address(nftMembership), address(directDemocracyVoting));
 
         directDemocracyVoting = new DirectDemocracyVoting(
-            address(democracyToken), address(nftMembership), allowedRoleNames, address(treasury), quorumPercentage
+            address(democracyToken),
+            address(nftMembership),
+            allowedRoleNames,
+            address(treasury),
+            quorumPercentage
         );
+
+        directDemocracyVoting.setElectionsContract(address(elections));
 
         // Set initial balances
         deal(address(democracyToken), voter1, 100);
@@ -40,13 +49,28 @@ contract DirectDemocracyVotingTest is Test {
         // set owner as member
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
 
-        deal(address(democracyToken), address(treasury), 1000 * 10 ** 18);
+        candidateAddresses.push(voter1);
+        candidateAddresses.push(voter2);
+
+        candidateNames.push("Candidate 1");
+        candidateNames.push("Candidate 2");
     }
 
-    function testCreateProposal() public {
+    function testCreateProposalWithElection() public {
         vm.prank(owner);
         directDemocracyVoting.createProposal(
-            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            true,
+            candidateAddresses,
+            candidateNames
         );
 
         (
@@ -68,12 +92,35 @@ contract DirectDemocracyVotingTest is Test {
         assertEq(transferAmount, 100);
         assertEq(transferEnabled, false);
         assertEq(transferToken, address(0));
+
+        // Verify election creation
+        (bool isActive,,) = elections.getElectionDetails(0);
+        assertTrue(isActive, "Election should be created and active");
+
+        // Verify candidates added
+        ElectionContract.Candidate[] memory candidates = elections.getCandidates(0);
+        assertEq(candidates.length, 2, "Two candidates should be added");
+        assertEq(candidates[0].candidateAddress, candidateAddresses[0], "Candidate 1 address should match");
+        assertEq(candidates[0].candidateName, candidateNames[0], "Candidate 1 name should match");
+        assertEq(candidates[1].candidateAddress, candidateAddresses[1], "Candidate 2 address should match");
+        assertEq(candidates[1].candidateName, candidateNames[1], "Candidate 2 name should match");
     }
 
     function testVote() public {
         vm.prank(owner);
         directDemocracyVoting.createProposal(
-            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            true,
+            candidateAddresses,
+            candidateNames
         );
 
         vm.prank(voter1);
@@ -86,7 +133,7 @@ contract DirectDemocracyVotingTest is Test {
         assertEq(totalVotes, 1);
     }
 
-    function testAnnounceWinner() public {
+    function testAnnounceWinnerWithElection() public {
         vm.prank(owner);
         directDemocracyVoting.createProposal(
             "Proposal1",
@@ -96,8 +143,11 @@ contract DirectDemocracyVotingTest is Test {
             0,
             payable(treasuryAddress),
             100,
+            false,
+            address(0),
             true,
-            address(democracyToken)
+            candidateAddresses,
+            candidateNames
         );
 
         vm.prank(voter1);
@@ -111,6 +161,11 @@ contract DirectDemocracyVotingTest is Test {
         (uint256 winningOptionIndex, bool hasValidWinner) = directDemocracyVoting.getWinner(0);
         assertEq(winningOptionIndex, 0);
         assertEq(hasValidWinner, true);
+
+        // Verify election conclusion
+        (, uint256 winningCandidateIndex, bool electionHasValidWinner) = elections.getElectionDetails(0);
+        assertEq(winningCandidateIndex, 0, "Winning candidate index should be 0");
+        assertTrue(electionHasValidWinner, "Election should have a valid winner");
     }
 
     function testNonMemberCannotCreateProposal() public {
@@ -120,7 +175,7 @@ contract DirectDemocracyVotingTest is Test {
         vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
 
         directDemocracyVoting.createProposal(
-            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0), false, candidateAddresses, candidateNames
         );
     }
 }
@@ -189,5 +244,74 @@ contract TreasuryMock is ITreasury {
 
     function withdrawEther(address payable _to, uint256 _amount) external {
         _to.transfer(_amount);
+    }
+}
+
+contract ElectionMock is IElections {
+    struct Election {
+        bool isActive;
+        uint256 winningCandidateIndex;
+        bool hasValidWinner;
+        Candidate[] candidates;
+    }
+
+    struct Candidate {
+        address candidateAddress;
+        string candidateName;
+    }
+
+    address public votingContract = address(1);
+
+    Election[] public elections;
+    mapping(uint256 => uint256) public proposalIdToElectionId;
+
+    function createElection(
+        uint256 _proposalId
+    ) external returns (uint256, uint256) {
+
+        Election memory newElection;
+        elections.push(newElection);
+        proposalIdToElectionId[_proposalId] = elections.length - 1;
+
+        newElection.isActive = true;
+
+        uint256 electionId = elections.length - 1;
+        
+        return (electionId, _proposalId);
+        
+    }
+
+    function addCandidate(uint256 _electionId, address _candidateAddress, string memory _candidateName) external override {
+        require(elections[_electionId].isActive, "Election not created");
+        elections[_electionId].candidates.push(Candidate({
+            candidateAddress: _candidateAddress,
+            candidateName: _candidateName
+        }));
+    }
+
+    function concludeElection(uint256 _electionId, uint256 winningOption) external override {
+        require(elections[_electionId].isActive, "Election not created");
+        elections[_electionId].isActive = false;
+        elections[_electionId].winningCandidateIndex = winningOption;
+        elections[_electionId].hasValidWinner = true;
+    }
+
+    function getElectionDetails(uint256 _electionId) external view returns (bool, uint256, bool) {
+        return (
+            elections[_electionId].isActive,
+            elections[_electionId].winningCandidateIndex,
+            elections[_electionId].hasValidWinner
+        );
+    }
+
+    function getCandidates(uint256 _electionId) external view  returns (Candidate[] memory) {
+        return elections[_electionId].candidates;
+    }
+
+    function getElectionResults(uint256 _electionId) external view returns (uint256, bool) {
+        return (
+            elections[_electionId].winningCandidateIndex,
+            elections[_electionId].hasValidWinner
+        );
     }
 }

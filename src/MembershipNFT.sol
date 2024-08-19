@@ -18,6 +18,8 @@ contract NFTMembership is ERC721URIStorage, Ownable {
     address quickJoin;
     bool quickJoinSet = false;
 
+    address public electionContract;
+
     string private constant DEFAULT_MEMBER_TYPE = "Default";
     string private defaultImageURL;
 
@@ -44,6 +46,20 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         _;
     }
 
+    modifier canMintCustomNFT() {
+        // require is executive or is voting contract
+        require(
+            isExecutiveRole[memberTypeOf[msg.sender]] || msg.sender == electionContract,
+            "Not an executive role or election contract"
+        );
+        _;
+    }
+
+    function setElectionContract(address _electionContract) public {
+        require(electionContract == address(0), "Election contract already set");
+        electionContract = _electionContract;
+    }
+
     function setQuickJoin(address _quickJoin) public {
         require(!quickJoinSet, "QuickJoin already set");
         quickJoin = _quickJoin;
@@ -64,7 +80,7 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         return memberTypeOf[user];
     }
 
-    function mintNFT(address recipient, string memory memberTypeName) public onlyExecutiveRole {
+    function mintNFT(address recipient, string memory memberTypeName) public canMintCustomNFT {
         require(bytes(memberTypeImages[memberTypeName]).length > 0, "Image for member type not set");
         string memory tokenURI = memberTypeImages[memberTypeName];
         uint256 tokenId = _nextTokenId++;
@@ -74,7 +90,7 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         emit mintedNFT(recipient, memberTypeName, tokenURI);
     }
 
-    function changeMembershipType(address user, string memory newMemberType) public onlyExecutiveRole {
+    function changeMembershipType(address user, string memory newMemberType) public canMintCustomNFT {
         require(bytes(memberTypeImages[newMemberType]).length > 0, "Image for member type not set");
         memberTypeOf[user] = newMemberType;
         emit membershipTypeChanged(user, newMemberType);

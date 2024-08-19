@@ -15,12 +15,11 @@ interface ITreasury {
 
 interface IElections {
     function createElection(
-        uint256 _startTime,
-        uint256 _endTime
-    ) external;
+        uint256 _proposalId
+    ) external returns (uint256, uint256);
 
     function addCandidate(
-        uint256 _electionId,
+        uint256 _proposalId,
         address _candidateAddress,
         string memory _candidateName
     ) external;
@@ -132,7 +131,7 @@ contract DirectDemocracyVoting {
         string[] memory _candidateNames
     ) external canCreateProposal {
         require(_candidateAddresses.length == _candidateNames.length, "Candidates and names length mismatch");
-        
+
         Proposal storage newProposal = proposals.push();
         newProposal.totalVotes = 0;
         newProposal.timeInMinutes = _timeInMinutes;
@@ -163,7 +162,7 @@ contract DirectDemocracyVoting {
         }
 
         if (_electionEnabled) {
-            elections.createElection( block.timestamp, block.timestamp + _timeInMinutes * 1 minutes);
+            elections.createElection( proposalId);
             for (uint256 i = 0; i < _candidateAddresses.length; i++) {
                 elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
             }
