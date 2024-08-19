@@ -127,8 +127,12 @@ contract DirectDemocracyVoting {
         uint256 _transferAmount,
         bool _transferEnabled,
         address _transferToken,
-        bool _electionEnabled
+        bool _electionEnabled,
+        address[] memory _candidateAddresses,
+        string[] memory _candidateNames
     ) external canCreateProposal {
+        require(_candidateAddresses.length == _candidateNames.length, "Candidates and names length mismatch");
+        
         Proposal storage newProposal = proposals.push();
         newProposal.totalVotes = 0;
         newProposal.timeInMinutes = _timeInMinutes;
@@ -160,6 +164,9 @@ contract DirectDemocracyVoting {
 
         if (_electionEnabled) {
             elections.createElection( block.timestamp, block.timestamp + _timeInMinutes * 1 minutes);
+            for (uint256 i = 0; i < _candidateAddresses.length; i++) {
+                elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
+            }
         }
     }
 

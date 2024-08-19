@@ -6,35 +6,17 @@ interface INFTMembership {
     function mintNFT(address recipient, string memory memberTypeName) external;
 }
 
-interface IVoting {
-    function createProposal(
-        string memory _name,
-        string memory _description,
-        uint256 _timeInMinutes,
-        uint256 _transferTriggerOptionIndex,
-        address payable _transferRecipient,
-        uint256 _transferAmount,
-        bool _transferEnabled,
-        address _transferToken
-    ) external;
-
-    function vote(uint256 proposalId, uint256 optionIndex) external;
-}
-
 contract ElectionContract {
     INFTMembership public nftMembership;
-    IVoting public votingContract;
+    address public votingContract;
     bool public electionEnabled;
 
     struct Candidate {
         address candidateAddress;
         string candidateName;
-        uint256 voteCount;
     }
 
     struct Election {
-        uint256 startTime;
-        uint256 endTime;
         bool isActive;
         uint256 winningCandidateIndex;
         bool hasValidWinner;
@@ -48,13 +30,13 @@ contract ElectionContract {
     event ElectionConcluded(uint256 indexed electionId, uint256 winningCandidateIndex, bool hasValidWinner);
 
     modifier onlyVotingContract() {
-        require(msg.sender == address(votingContract), "Only the voting contract can call this function");
+        require(msg.sender == votingContract, "Only voting contract can call this function");
         _;
     }
 
     constructor(address _nftMembership, address _votingContractAddress) {
         nftMembership = INFTMembership(_nftMembership);
-        votingContract = IVoting(_votingContractAddress);
+        votingContract = _votingContractAddress;
     }
 
     function createElection(
@@ -72,7 +54,7 @@ contract ElectionContract {
         require(electionId < elections.length, "Invalid election ID");
         require(elections[electionId].isActive, "Election is not active");
 
-        elections[electionId].candidates.push(Candidate(_candidateAddress, _candidateName, 0));
+        elections[electionId].candidates.push(Candidate(_candidateAddress, _candidateName));
         emit CandidateAdded(electionId, elections[electionId].candidates.length - 1, _candidateAddress, _candidateName);
     }
 
@@ -88,7 +70,6 @@ contract ElectionContract {
         nftMembership.mintNFT(elections[electionId].candidates[winningOption].candidateAddress, "Executive");
 
         emit ElectionConcluded(electionId, winningOption, true);
-
 
     }
 
