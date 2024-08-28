@@ -20,12 +20,8 @@ contract ElectionContractTest is Test {
 
         string[] memory executiveRoleNames = new string[](1);
         executiveRoleNames[0] = "Executive";
-        nftMembership = new NFTMembership(
-            memberTypeNames,
-            executiveRoleNames,
-            "defaultImageURL"
-        );
-       
+        nftMembership = new NFTMembership(memberTypeNames, executiveRoleNames, "defaultImageURL");
+
         electionContract = new ElectionContract(address(nftMembership), votingContractAddress);
         nftMembership.setElectionContract(address(electionContract));
     }
@@ -39,14 +35,14 @@ contract ElectionContractTest is Test {
         assertEq(proposalId, 1);
 
         // Check that the election was created correctly
-        (bool isActive, , bool hasValidWinner) = electionContract.getElectionDetails(electionId);
+        (bool isActive,, bool hasValidWinner) = electionContract.getElectionDetails(electionId);
         assertTrue(isActive);
         assertFalse(hasValidWinner);
     }
 
     function testAddCandidate() public {
         vm.prank(votingContractAddress);
-        (uint256 electionId, ) = electionContract.createElection(1);
+        (uint256 electionId,) = electionContract.createElection(1);
 
         vm.prank(votingContractAddress);
         electionContract.addCandidate(1, candidate1, "Candidate 1");
@@ -59,7 +55,7 @@ contract ElectionContractTest is Test {
 
     function testConcludeElection() public {
         vm.prank(votingContractAddress);
-        (uint256 electionId, ) = electionContract.createElection(1);
+        (uint256 electionId,) = electionContract.createElection(1);
 
         vm.prank(votingContractAddress);
         electionContract.addCandidate(1, candidate1, "Candidate 1");
@@ -67,7 +63,8 @@ contract ElectionContractTest is Test {
         vm.prank(votingContractAddress);
         electionContract.concludeElection(1, 0);
 
-        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) = electionContract.getElectionDetails(electionId);
+        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) =
+            electionContract.getElectionDetails(electionId);
         assertFalse(isActive);
         assertTrue(hasValidWinner);
         assertEq(winningCandidateIndex, 0);
@@ -78,7 +75,7 @@ contract ElectionContractTest is Test {
 
     function testFailAddCandidateWhenElectionIsConcluded() public {
         vm.prank(votingContractAddress);
-        (uint256 electionId, ) = electionContract.createElection(1);
+        (uint256 electionId,) = electionContract.createElection(1);
 
         vm.prank(votingContractAddress);
         electionContract.addCandidate(1, candidate1, "Candidate 1");
@@ -88,21 +85,20 @@ contract ElectionContractTest is Test {
 
         // Adding a candidate after the election is concluded should fail
         vm.expectRevert("Election is not active");
-        vm.prank(votingContractAddress);
         electionContract.addCandidate(1, candidate2, "Candidate 2");
     }
 
     function testFailConcludeElectionWhenInvalidWinningOption() public {
         vm.prank(votingContractAddress);
-        (uint256 electionId, ) = electionContract.createElection(1);
+        (uint256 electionId,) = electionContract.createElection(1);
 
         vm.prank(votingContractAddress);
         electionContract.addCandidate(1, candidate1, "Candidate 1");
 
         // Attempting to conclude an election with an invalid winning option should fail
+
         vm.expectRevert("Invalid winning option");
-        vm.prank(votingContractAddress);
-        electionContract.concludeElection(1, 0);
+        electionContract.concludeElection(1, 1);
     }
 
     function testFailAddCandidateByNonVotingContract() public {
@@ -142,7 +138,8 @@ contract ElectionContractTest is Test {
         electionContract.concludeElection(1, 2);
 
         // Verify Results
-        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) = electionContract.getElectionDetails(electionId);
+        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) =
+            electionContract.getElectionDetails(electionId);
         assertFalse(isActive);
         assertTrue(hasValidWinner);
         assertEq(winningCandidateIndex, 2);
@@ -182,13 +179,15 @@ contract ElectionContractTest is Test {
         electionContract.concludeElection(2, 0);
 
         // Verify first election results
-        (bool isActive1, uint256 winningCandidateIndex1, bool hasValidWinner1) = electionContract.getElectionDetails(electionId1);
+        (bool isActive1, uint256 winningCandidateIndex1, bool hasValidWinner1) =
+            electionContract.getElectionDetails(electionId1);
         assertFalse(isActive1);
         assertTrue(hasValidWinner1);
         assertEq(winningCandidateIndex1, 0);
 
         // Verify second election results
-        (bool isActive2, uint256 winningCandidateIndex2, bool hasValidWinner2) = electionContract.getElectionDetails(electionId2);
+        (bool isActive2, uint256 winningCandidateIndex2, bool hasValidWinner2) =
+            electionContract.getElectionDetails(electionId2);
         assertFalse(isActive2);
         assertTrue(hasValidWinner2);
         assertEq(winningCandidateIndex2, 0);

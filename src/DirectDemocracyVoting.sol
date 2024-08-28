@@ -14,15 +14,9 @@ interface ITreasury {
 }
 
 interface IElections {
-    function createElection(
-        uint256 _proposalId
-    ) external returns (uint256, uint256);
+    function createElection(uint256 _proposalId) external returns (uint256, uint256);
 
-    function addCandidate(
-        uint256 _proposalId,
-        address _candidateAddress,
-        string memory _candidateName
-    ) external;
+    function addCandidate(uint256 _proposalId, address _candidateAddress, string memory _candidateName) external;
 
     function concludeElection(uint256 _electionId, uint256 winningOption) external;
 }
@@ -139,6 +133,9 @@ contract DirectDemocracyVoting {
         newProposal.transferTriggerOptionIndex = _transferTriggerOptionIndex;
         newProposal.transferRecipient = _transferRecipient;
         newProposal.transferAmount = _transferAmount;
+        newProposal.transferEnabled = _transferEnabled;
+        newProposal.transferToken = _transferToken;
+        newProposal.electionEnabled = _electionEnabled;
 
         uint256 proposalId = proposals.length - 1;
         emit NewProposal(
@@ -153,7 +150,6 @@ contract DirectDemocracyVoting {
             _transferEnabled,
             _transferToken,
             _electionEnabled
-
         );
 
         for (uint256 i = 0; i < _optionNames.length; i++) {
@@ -162,7 +158,7 @@ contract DirectDemocracyVoting {
         }
 
         if (_electionEnabled) {
-            elections.createElection( proposalId);
+            elections.createElection(proposalId);
             for (uint256 i = 0; i < _candidateAddresses.length; i++) {
                 elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
             }
@@ -203,7 +199,8 @@ contract DirectDemocracyVoting {
                 );
             }
         }
-        if(proposals[_proposalId].electionEnabled && hasValidWinner) {
+
+        if (proposals[_proposalId].electionEnabled && hasValidWinner) {
             elections.concludeElection(_proposalId, winningOptionIndex);
         }
 
@@ -290,7 +287,7 @@ contract DirectDemocracyVoting {
         return proposals.length;
     }
 
-    function setElectionsContract (address _electionsContract) public {
+    function setElectionsContract(address _electionsContract) public {
         elections = IElections(_electionsContract);
     }
 }

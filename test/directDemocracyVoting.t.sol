@@ -20,7 +20,7 @@ contract DirectDemocracyVotingTest is Test {
     address public treasuryAddress = address(5);
 
     uint256 public quorumPercentage = 51;
-    string[] public allowedRoleNames = ["member"];
+    string[] public allowedRoleNames = ["Executive"];
     string[] public optionNames = ["Option1", "Option2"];
     address[] public candidateAddresses;
     string[] public candidateNames;
@@ -29,15 +29,12 @@ contract DirectDemocracyVotingTest is Test {
         democracyToken = IERC20(address(new ERC20Mock("Democracy Token", "DDT")));
         nftMembership = new NFTMembershipMock();
         treasury = new TreasuryMock();
-        elections = new ElectionContract(address(nftMembership), address(directDemocracyVoting));
 
         directDemocracyVoting = new DirectDemocracyVoting(
-            address(democracyToken),
-            address(nftMembership),
-            allowedRoleNames,
-            address(treasury),
-            quorumPercentage
+            address(democracyToken), address(nftMembership), allowedRoleNames, address(treasury), quorumPercentage
         );
+
+        elections = new ElectionContract(address(nftMembership), address(directDemocracyVoting));
 
         directDemocracyVoting.setElectionsContract(address(elections));
 
@@ -47,7 +44,7 @@ contract DirectDemocracyVotingTest is Test {
         deal(address(democracyToken), voter3, 100);
 
         // set owner as member
-        NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
+        NFTMembershipMock(address(nftMembership)).setMemberType(owner, "Executive");
 
         candidateAddresses.push(voter1);
         candidateAddresses.push(voter2);
@@ -138,7 +135,7 @@ contract DirectDemocracyVotingTest is Test {
         directDemocracyVoting.createProposal(
             "Proposal1",
             "Description1",
-            1, // 1 minute for quick expiration
+            1,
             optionNames,
             0,
             payable(treasuryAddress),
@@ -166,6 +163,9 @@ contract DirectDemocracyVotingTest is Test {
         (, uint256 winningCandidateIndex, bool electionHasValidWinner) = elections.getElectionDetails(0);
         assertEq(winningCandidateIndex, 0, "Winning candidate index should be 0");
         assertTrue(electionHasValidWinner, "Election should have a valid winner");
+
+        // Verify NFT minted
+        assertEq(nftMembership.checkMemberTypeByAddress(voter1), "Executive", "Voter 1 should be minted as Executive");
     }
 
     function testNonMemberCannotCreateProposal() public {
@@ -175,7 +175,18 @@ contract DirectDemocracyVotingTest is Test {
         vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
 
         directDemocracyVoting.createProposal(
-            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0), false, candidateAddresses, candidateNames
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
         );
     }
 }
@@ -233,6 +244,10 @@ contract NFTMembershipMock is INFTMembership2 {
     function setMemberType(address user, string memory _type) external {
         memberType[user] = _type;
     }
+
+    function mintNFT(address _to, string memory _type) external {
+        memberType[_to] = _type;
+    }
 }
 
 contract TreasuryMock is ITreasury {
@@ -265,10 +280,7 @@ contract ElectionMock is IElections {
     Election[] public elections;
     mapping(uint256 => uint256) public proposalIdToElectionId;
 
-    function createElection(
-        uint256 _proposalId
-    ) external returns (uint256, uint256) {
-
+    function createElection(uint256 _proposalId) external returns (uint256, uint256) {
         Election memory newElection;
         elections.push(newElection);
         proposalIdToElectionId[_proposalId] = elections.length - 1;
@@ -276,17 +288,18 @@ contract ElectionMock is IElections {
         newElection.isActive = true;
 
         uint256 electionId = elections.length - 1;
-        
+
         return (electionId, _proposalId);
-        
     }
 
-    function addCandidate(uint256 _electionId, address _candidateAddress, string memory _candidateName) external override {
+    function addCandidate(uint256 _electionId, address _candidateAddress, string memory _candidateName)
+        external
+        override
+    {
         require(elections[_electionId].isActive, "Election not created");
-        elections[_electionId].candidates.push(Candidate({
-            candidateAddress: _candidateAddress,
-            candidateName: _candidateName
-        }));
+        elections[_electionId].candidates.push(
+            Candidate({candidateAddress: _candidateAddress, candidateName: _candidateName})
+        );
     }
 
     function concludeElection(uint256 _electionId, uint256 winningOption) external override {
@@ -304,14 +317,11 @@ contract ElectionMock is IElections {
         );
     }
 
-    function getCandidates(uint256 _electionId) external view  returns (Candidate[] memory) {
+    function getCandidates(uint256 _electionId) external view returns (Candidate[] memory) {
         return elections[_electionId].candidates;
     }
 
     function getElectionResults(uint256 _electionId) external view returns (uint256, bool) {
-        return (
-            elections[_electionId].winningCandidateIndex,
-            elections[_electionId].hasValidWinner
-        );
+        return (elections[_electionId].winningCandidateIndex, elections[_electionId].hasValidWinner);
     }
 }

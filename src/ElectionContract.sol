@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
+
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "forge-std/console.sol";
 
 interface INFTMembership {
     function mintNFT(address recipient, string memory memberTypeName) external;
@@ -29,7 +29,9 @@ contract ElectionContract {
     Election[] public elections;
 
     event ElectionCreated(uint256 proposalId, uint256 indexed electionId);
-    event CandidateAdded(uint256 indexed electionId, uint256 candidateIndex, address candidateAddress, string candidateName);
+    event CandidateAdded(
+        uint256 indexed electionId, uint256 candidateIndex, address candidateAddress, string candidateName
+    );
     event ElectionConcluded(uint256 indexed electionId, uint256 winningCandidateIndex, bool hasValidWinner);
 
     modifier onlyVotingContract() {
@@ -42,25 +44,23 @@ contract ElectionContract {
         votingContract = _votingContractAddress;
     }
 
-    function createElection(
-        uint256 _proposalId
-    ) external onlyVotingContract returns (uint256, uint256) {
-
+    function createElection(uint256 _proposalId) external onlyVotingContract returns (uint256, uint256) {
         Election memory newElection;
         newElection.isActive = true;
         elections.push(newElection);
         proposalIdToElectionId[_proposalId] = elections.length - 1;
 
-        
-
         uint256 electionId = elections.length - 1;
         emit ElectionCreated(electionId, _proposalId);
         return (electionId, _proposalId);
-
     }
 
-    function addCandidate(uint256 proposalId, address _candidateAddress, string memory _candidateName) external onlyVotingContract {
+    function addCandidate(uint256 proposalId, address _candidateAddress, string memory _candidateName)
+        external
+        onlyVotingContract
+    {
         uint256 electionId = proposalIdToElectionId[proposalId];
+
         require(electionId < elections.length, "Invalid election ID");
         require(elections[electionId].isActive, "Election is not active");
 
@@ -72,15 +72,11 @@ contract ElectionContract {
         uint256 electionId = proposalIdToElectionId[proposalId];
         require(electionId < elections.length, "Invalid election ID");
         require(elections[electionId].isActive, "Election is already concluded");
-        console.log("electionId: ", electionId);
-        console.log("winningOption: ", winningOption);
         uint256 length = elections[electionId].candidates.length;
-        console.log("length: ", length);
+
         require(length > winningOption, "Invalid winning option");
 
-
         Election storage election = elections[electionId];
-
         election.isActive = false;
         election.winningCandidateIndex = winningOption;
         election.hasValidWinner = true;
@@ -89,17 +85,12 @@ contract ElectionContract {
         nftMembership.mintNFT(elections[electionId].candidates[winningOption].candidateAddress, "Executive");
 
         emit ElectionConcluded(electionId, winningOption, true);
-
     }
 
     function getElectionDetails(uint256 electionId) external view returns (bool, uint256, bool) {
         require(electionId < elections.length, "Invalid election ID");
         Election storage election = elections[electionId];
-        return (
-            election.isActive,
-            election.winningCandidateIndex,
-            election.hasValidWinner
-        );
+        return (election.isActive, election.winningCandidateIndex, election.hasValidWinner);
     }
 
     function getCandidates(uint256 electionId) external view returns (Candidate[] memory) {

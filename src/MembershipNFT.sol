@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "forge-std/console.sol";
 
 contract NFTMembership is ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
