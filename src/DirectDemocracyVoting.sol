@@ -62,7 +62,8 @@ contract DirectDemocracyVoting {
         uint256 transferAmount,
         bool transferEnabled,
         address transferToken,
-        bool electionEnabled
+        bool electionEnabled,
+        uint256 electionId
     );
     event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex);
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
@@ -141,6 +142,20 @@ contract DirectDemocracyVoting {
         newProposal.electionEnabled = _electionEnabled;
 
         uint256 proposalId = proposals.length - 1;
+
+        for (uint256 i = 0; i < _optionNames.length; i++) {
+            newProposal.options.push(PollOption(0));
+            emit PollOptionNames(proposalId, i, _optionNames[i]);
+        }
+
+        uint256 electionId;
+
+        if (_electionEnabled) {
+            (electionId,) = elections.createElection(proposalId);
+            for (uint256 i = 0; i < _candidateAddresses.length; i++) {
+                elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
+            }
+        }
         emit NewProposal(
             proposalId,
             _name,
@@ -152,20 +167,9 @@ contract DirectDemocracyVoting {
             _transferAmount,
             _transferEnabled,
             _transferToken,
-            _electionEnabled
+            _electionEnabled,
+            electionId
         );
-
-        for (uint256 i = 0; i < _optionNames.length; i++) {
-            newProposal.options.push(PollOption(0));
-            emit PollOptionNames(proposalId, i, _optionNames[i]);
-        }
-
-        if (_electionEnabled) {
-            elections.createElection(proposalId);
-            for (uint256 i = 0; i < _candidateAddresses.length; i++) {
-                elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
-            }
-        }
     }
 
     function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
