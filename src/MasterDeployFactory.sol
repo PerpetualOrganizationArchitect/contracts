@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// Import all factories
-import "./DirectDemocracyVotingFactory.sol";
 import "./DirectDemocracyTokenFactory.sol";
+import "./DirectDemocracyVotingFactory.sol";
 import "./HybridVotingFactory.sol";
 import "./ParticipationTokenFactory.sol";
 import "./ParticipationVotingFactory.sol";
@@ -12,6 +11,7 @@ import "./MembershipNFTFactory.sol";
 import "./RegistryFactory.sol";
 import "./TaskManagerFactory.sol";
 import "./QuickJoinFactory.sol";
+import "./ElectionContractFactory.sol";
 
 contract MasterFactory {
     event DeployParamsLog(
@@ -38,6 +38,7 @@ contract MasterFactory {
     RegistryFactory registryFactory;
     TaskManagerFactory taskManagerFactory;
     QuickJoinFactory quickJoinFactory;
+    ElectionContractFactory electionContractFactory;
     address accountManagerAddress;
 
     struct DeployParams {
@@ -56,6 +57,7 @@ contract MasterFactory {
         uint256 quorumPercentageDD;
         uint256 quorumPercentagePV;
         string username;
+        bool electionEnabled;
     }
 
     constructor(
@@ -69,7 +71,8 @@ contract MasterFactory {
         address _registryFactory,
         address _taskManagerFactory,
         address _quickJoinFactory,
-        address _accountManagerAddress
+        address _accountManagerAddress,
+        address _electionContractFactory
     ) {
         directDemocracyTokenFactory = DirectDemocracyTokenFactory(_directDemocracyTokenFactory);
         directDemocracyVotingFactory = DirectDemocracyVotingFactory(_directDemocracyVotingFactory);
@@ -81,6 +84,7 @@ contract MasterFactory {
         registryFactory = RegistryFactory(_registryFactory);
         taskManagerFactory = TaskManagerFactory(_taskManagerFactory);
         quickJoinFactory = QuickJoinFactory(_quickJoinFactory);
+        electionContractFactory = ElectionContractFactory(_electionContractFactory);
         accountManagerAddress = _accountManagerAddress;
     }
 
@@ -99,53 +103,64 @@ contract MasterFactory {
             params.contractNames
         );
 
-        address[] memory contractAddresses = new address[](8);
+        uint256 deployedContractCount = 0;
+        address[] memory contractAddresses = new address[](params.contractNames.length);
 
-        deployStandardContracts(
-            contractAddresses, params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname
+        // Deploy standard contracts
+        contractAddresses[deployedContractCount++] =
+            deployNFTMembership(params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname);
+        contractAddresses[deployedContractCount++] =
+            deployDirectDemocracyToken(contractAddresses[0], params.executivePermissionNames, params.POname);
+        contractAddresses[deployedContractCount++] = deployParticipationToken(params.POname);
+        contractAddresses[deployedContractCount++] = deployTreasury(params.POname);
+
+        // Deploy conditional contracts
+        contractAddresses[deployedContractCount++] = deployDemocracyVoting(
+            contractAddresses, params.executivePermissionNames, params.POname, params.quorumPercentageDD
         );
-        deployConditionalContracts(contractAddresses, params);
 
-        address votingControlAddress = determineVotingControlAddress(params.votingControlType, contractAddresses);
+        if (params.hybridVotingEnabled) {
+            contractAddresses[deployedContractCount++] = deployHybridVoting(contractAddresses, params);
+        } else if (params.participationVotingEnabled) {
+            contractAddresses[deployedContractCount++] = deployPartcipationVoting(
+                contractAddresses,
+                params.executivePermissionNames,
+                params.quadraticVotingEnabled,
+                params.POname,
+                params.quorumPercentagePV
+            );
+        }
 
-        // Set TaskManager in participation token contract
-        IParticipationToken token = IParticipationToken(contractAddresses[2]);
-        token.setTaskManagerAddress(contractAddresses[6]);
-        // Set Voting Contract in Treasury
-        ITreasury treasury = ITreasury(contractAddresses[3]);
-        treasury.setVotingContract(votingControlAddress);
+        contractAddresses[deployedContractCount++] = taskManagerFactory.createTaskManager(
+            contractAddresses[2], contractAddresses[0], params.executivePermissionNames, params.POname
+        );
 
-        contractAddresses[7] = quickJoinFactory.createQuickJoin(
+        contractAddresses[deployedContractCount++] = quickJoinFactory.createQuickJoin(
             contractAddresses[0], contractAddresses[1], accountManagerAddress, params.POname, address(this)
         );
 
-        // Create the registry and store its address
+        if (params.electionEnabled) {
+            contractAddresses[deployedContractCount++] = deployElectionContract(contractAddresses, params.POname);
+        }
+
+        // Finalize by removing any unused addresses (which should be 0x0000)
+        address[] memory finalContractAddresses = new address[](deployedContractCount);
+        for (uint256 i = 0; i < deployedContractCount; i++) {
+            finalContractAddresses[i] = contractAddresses[i];
+        }
+
         address registryAddress = registryFactory.createRegistry(
-            votingControlAddress,
+            determineVotingControlAddress(params.votingControlType, finalContractAddresses),
             params.contractNames,
-            contractAddresses,
+            finalContractAddresses,
             params.POname,
             params.logoURL,
             params.infoIPFSHash
         );
-        IQuickJoin quickJoin = IQuickJoin(contractAddresses[7]);
-
-        IDirectDemocracyToken2 directDemocracyToken = IDirectDemocracyToken2(contractAddresses[1]);
-        directDemocracyToken.setQuickJoin(contractAddresses[7]);
-
-        INFTMembership4 nftMembership = INFTMembership4(contractAddresses[0]);
-        nftMembership.setQuickJoin(contractAddresses[7]);
-
-        if (bytes(params.username).length > 0) {
-            quickJoin.quickJoinNoUserMasterDeploy(params.username, msg.sender);
-        } else {
-            quickJoin.quickJoinWithUserMasterDeploy(msg.sender);
-        }
 
         return registryAddress;
     }
 
-    // Splitting deployment functions for clarity and reducing stack depth
     function deployNFTMembership(
         string[] memory memberTypeNames,
         string[] memory executivePermissionNames,
@@ -173,38 +188,14 @@ contract MasterFactory {
         return treasuryFactory.createTreasury(POname);
     }
 
-    function deployStandardContracts(
-        address[] memory contractAddresses,
-        string[] memory memberTypeNames,
-        string[] memory executivePermissionNames,
-        string memory logoURL,
-        string memory POname
-    ) internal {
-        contractAddresses[0] = deployNFTMembership(memberTypeNames, executivePermissionNames, logoURL, POname);
-        contractAddresses[1] = deployDirectDemocracyToken(contractAddresses[0], memberTypeNames, POname);
-        contractAddresses[2] = deployParticipationToken(POname);
-        contractAddresses[3] = deployTreasury(POname);
-    }
-
-    function deployConditionalContracts(address[] memory contractAddresses, DeployParams memory params) internal {
-        contractAddresses[5] = params.participationVotingEnabled
-            ? deployPartcipationVoting(
-                contractAddresses,
-                params.executivePermissionNames,
-                params.quadraticVotingEnabled,
-                params.POname,
-                params.quorumPercentagePV
-            )
-            : address(0);
-        contractAddresses[4] = deployDemocracyVoting(
-            contractAddresses, params.executivePermissionNames, params.POname, params.quorumPercentageDD
-        );
-        contractAddresses[5] = params.hybridVotingEnabled ? deployHybridVoting(contractAddresses, params) : address(0);
-        if (!params.hybridVotingEnabled && !params.participationVotingEnabled) {
-            contractAddresses[5] = address(0);
-        }
-        contractAddresses[6] = taskManagerFactory.createTaskManager(
-            contractAddresses[2], contractAddresses[0], params.executivePermissionNames, params.POname
+    function deployElectionContract(address[] memory contractAddresses, string memory POname)
+        internal
+        returns (address)
+    {
+        return electionContractFactory.createElectionContract(
+            contractAddresses[0], // NFT Membership Address
+            contractAddresses[4], // Voting Contract Address (Direct Democracy Voting)
+            POname
         );
     }
 
@@ -275,13 +266,4 @@ contract MasterFactory {
             revert("Invalid voting control type");
         }
     }
-}
-
-interface IQuickJoin {
-    function quickJoinNoUserMasterDeploy(string memory userName, address newUser) external;
-    function quickJoinWithUserMasterDeploy(address newUser) external;
-}
-
-interface IDirectDemocracyToken2 {
-    function setQuickJoin(address _quickJoin) external;
 }

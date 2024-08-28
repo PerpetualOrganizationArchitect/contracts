@@ -3,12 +3,12 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
-interface INFTMembership {
+interface INFTMembership6 {
     function mintNFT(address recipient, string memory memberTypeName) external;
 }
 
 contract ElectionContract {
-    INFTMembership public nftMembership;
+    INFTMembership6 public nftMembership;
     address public votingContract;
     bool public electionEnabled;
 
@@ -40,7 +40,7 @@ contract ElectionContract {
     }
 
     constructor(address _nftMembership, address _votingContractAddress) {
-        nftMembership = INFTMembership(_nftMembership);
+        nftMembership = INFTMembership6(_nftMembership);
         votingContract = _votingContractAddress;
     }
 
