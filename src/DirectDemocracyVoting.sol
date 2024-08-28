@@ -27,6 +27,8 @@ contract DirectDemocracyVoting {
     ITreasury public treasury;
     IElections public elections;
 
+    bool private electionSet = false;
+
     uint256 public quorumPercentage = 50;
 
     struct PollOption {
@@ -65,6 +67,7 @@ contract DirectDemocracyVoting {
     event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex);
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
+    event ElectionContractSet(address indexed electionContract);
 
     mapping(string => bool) private allowedRoles;
 
@@ -288,6 +291,9 @@ contract DirectDemocracyVoting {
     }
 
     function setElectionsContract(address _electionsContract) public {
+        require(!electionSet, "Election contract already set");
         elections = IElections(_electionsContract);
+        electionSet = true;
+        emit ElectionContractSet(_electionsContract);
     }
 }
