@@ -10,14 +10,15 @@ contract ParticipationTokenTest is Test {
     address public taskManager = address(2);
     address public user = address(3);
     address public otherUser = address(4);
+    address public nftMembership = address(5);
 
     function setUp() public {
-        participationToken = new ParticipationToken("Participation Token", "PT");
+        participationToken = new ParticipationToken("Participation Token", "PT", nftMembership);
 
         participationToken.setTaskManagerAddress(taskManager);
     }
 
-    function testSetTaskManagerAddress() public {
+    function testSetTaskManagerAddress() public view {
         assertEq(participationToken.getTaskManagerAddress(), taskManager);
     }
 

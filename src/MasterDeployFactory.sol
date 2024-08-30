@@ -115,7 +115,7 @@ contract MasterFactory {
             deployNFTMembership(params.memberTypeNames, params.executivePermissionNames, params.logoURL, params.POname);
         contractAddresses[contractIndex++] =
             deployDirectDemocracyToken(contractAddresses[0], params.executivePermissionNames, params.POname);
-        contractAddresses[contractIndex++] = deployParticipationToken(params.POname);
+        contractAddresses[contractIndex++] = deployParticipationToken(params.POname, contractAddresses[0]);
         contractAddresses[contractIndex++] = deployTreasury(params.POname);
 
         // Deploy conditional contracts
@@ -208,8 +208,8 @@ contract MasterFactory {
         );
     }
 
-    function deployParticipationToken(string memory POname) internal returns (address) {
-        return participationTokenFactory.createParticipationToken("ParticipationToken", "PT", POname);
+    function deployParticipationToken(string memory POname, address nftAddress) internal returns (address) {
+        return participationTokenFactory.createParticipationToken("ParticipationToken", "PT", POname, nftAddress);
     }
 
     function deployTreasury(string memory POname) internal returns (address) {

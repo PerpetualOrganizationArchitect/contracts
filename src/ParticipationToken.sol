@@ -6,12 +6,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ParticipationToken is ERC20, Ownable {
     address private taskManagerAddress;
+    address private nftMembership;
 
     event Mint(address indexed to, uint256 amount);
     event TaskManagerAddressSet(address taskManagerAddress);
 
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    constructor(string memory name, string memory symbol, address nftMembershipAddress) ERC20(name, symbol) {
         taskManagerAddress = address(0);
+        nftMembership = nftMembershipAddress;
     }
 
     modifier onlyTaskManager() {
