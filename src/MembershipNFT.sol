@@ -84,6 +84,10 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         return memberTypeOf[user];
     }
 
+    function checkIsExecutive(address user) public view returns (bool) {
+        return isExecutiveRole[memberTypeOf[user]];
+    }
+
     function mintNFT(address recipient, string memory memberTypeName) public canMintCustomNFT {
         require(bytes(memberTypeImages[memberTypeName]).length > 0, "Image for member type not set");
         string memory tokenURI = memberTypeImages[memberTypeName];
