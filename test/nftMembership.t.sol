@@ -133,6 +133,7 @@ contract NFTMembershipTest is Test {
     function testFailChangeMembershipType_NotExecutive() public {
         vm.prank(executive);
         nftMembership.mintNFT(user, "Gold");
+        assertEq(nftMembership.checkMemberTypeByAddress(user), "Gold");
 
         vm.prank(user);
         nftMembership.changeMembershipType(user, "Silver");

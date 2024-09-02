@@ -103,7 +103,7 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         memberTypeOf[user] = newMemberType;
         emit membershipTypeChanged(user, newMemberType);
     }
-    
+
     function giveUpExecutiveRole() public onlyExecutiveRole {
         memberTypeOf[msg.sender] = DEFAULT_MEMBER_TYPE;
         emit membershipTypeChanged(msg.sender, DEFAULT_MEMBER_TYPE);
@@ -119,17 +119,18 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         require(isExecutiveRole[memberTypeOf[executive]], "User is not an executive.");
         console.log("lastDowngradeTime[msg.sender]: ", lastDowngradeTime[msg.sender]);
         console.log("block.timestamp: ", block.timestamp);
-        require(block.timestamp >= lastDowngradeTime[msg.sender] + ONE_WEEK, "Downgrade limit reached. Try again in a week.");
-        
+        require(
+            block.timestamp >= lastDowngradeTime[msg.sender] + ONE_WEEK, "Downgrade limit reached. Try again in a week."
+        );
+
         memberTypeOf[executive] = DEFAULT_MEMBER_TYPE;
         lastDowngradeTime[msg.sender] = block.timestamp;
         emit ExecutiveDowngraded(executive, msg.sender);
     }
 
-
     bool public firstMint = true;
 
-    function mintDefaultNFT(address newUser) public onlyQuickJoin { 
+    function mintDefaultNFT(address newUser) public onlyQuickJoin {
         require(bytes(memberTypeOf[newUser]).length == 0, "User is already a member.");
         string memory tokenURI = defaultImageURL;
         uint256 tokenId = _nextTokenId++;

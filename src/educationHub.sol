@@ -13,7 +13,6 @@ interface INFTMembership11 {
 }
 
 contract EducationHub {
-
     struct Module {
         uint256 id;
         string name;
@@ -24,20 +23,22 @@ contract EducationHub {
     }
 
     mapping(uint256 => Module) public modules;
+    mapping(address => mapping(uint256 => bool)) public completedModules; // Tracks completion per user per module
 
-    uint256 public _id;
-
-    mapping(address => bool) public completedModules;
+    uint256 public nextModuleId;
 
     IParticipationToken2 public token;
     INFTMembership11 public nftMembership;
+
+    event ModuleCreated(uint256 indexed id, string name, string ipfsHash, uint256 payout, uint8 correctAnswer);
+    event ModuleCompleted(uint256 indexed id, address indexed completer);
 
     constructor(address _token, address _nftMembership) {
         token = IParticipationToken2(_token);
         nftMembership = INFTMembership11(_nftMembership);
     }
 
-     modifier isMember() {
+    modifier isMember() {
         string memory memberType = nftMembership.checkMemberTypeByAddress(msg.sender);
         require(bytes(memberType).length != 0, "Not a member");
         _;
@@ -48,30 +49,42 @@ contract EducationHub {
         _;
     }
 
+    function createModule(string memory _name, string memory _ipfsHash, uint256 _payout, uint8 _correctAnswer)
+        public
+        isExecutive
+    {
+        require(_payout > 0, "Payout must be greater than zero");
 
-    function createModule(string memory _name, string memory _ipfsHash, uint256 _payout, uint8 _correctAnswer) public isExecutive() {
-        Module memory newModule;
+        uint256 moduleId = nextModuleId++;
+        require(!modules[moduleId].exists, "Module already exists");
 
-        uint256 moduleId = _id++;
+        modules[moduleId] = Module({
+            id: moduleId,
+            name: _name,
+            ipfsHash: _ipfsHash,
+            exists: true,
+            payout: _payout,
+            correctAnswer: _correctAnswer
+        });
 
-        newModule.id = moduleId;
-        newModule.name = _name;
-        newModule.ipfsHash = _ipfsHash;
-        newModule.exists = true;
-        newModule.payout = _payout;
-        newModule.correctAnswer = _correctAnswer;
-
-        modules[moduleId] = newModule;
+        emit ModuleCreated(moduleId, _name, _ipfsHash, _payout, _correctAnswer);
     }
 
-    function completeModule(uint256 _moduleId, uint8 _answer) public isMember() {
+    function completeModule(uint256 _moduleId, uint8 _answer) public isMember {
         Module memory module = modules[_moduleId];
         require(module.exists, "Module does not exist");
         require(_answer == module.correctAnswer, "Incorrect answer");
+        require(!completedModules[msg.sender][_moduleId], "Module already completed");
 
-        if (!completedModules[msg.sender]) {
-            token.mint(msg.sender, module.payout);
-            completedModules[msg.sender] = true;
-        }
+        token.mint(msg.sender, module.payout);
+        completedModules[msg.sender][_moduleId] = true;
+
+        emit ModuleCompleted(_moduleId, msg.sender);
+    }
+
+    function removeModule(uint256 _moduleId) public isExecutive {
+        require(modules[_moduleId].exists, "Module does not exist");
+
+        delete modules[_moduleId];
     }
 }

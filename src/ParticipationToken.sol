@@ -37,7 +37,8 @@ contract ParticipationToken is ERC20, Ownable {
 
     modifier onlyExecutive() {
         require(
-            keccak256(abi.encodePacked(nftMembership.checkMemberTypeByAddress(msg.sender))) == keccak256(abi.encodePacked("Executive")),
+            keccak256(abi.encodePacked(nftMembership.checkMemberTypeByAddress(msg.sender)))
+                == keccak256(abi.encodePacked("Executive")),
             "Caller is not an executive."
         );
         _;
@@ -50,7 +51,8 @@ contract ParticipationToken is ERC20, Ownable {
 
     modifier isMember() {
         require(
-            keccak256(abi.encodePacked(nftMembership.checkMemberTypeByAddress(msg.sender))) != keccak256(abi.encodePacked("")),
+            keccak256(abi.encodePacked(nftMembership.checkMemberTypeByAddress(msg.sender)))
+                != keccak256(abi.encodePacked("")),
             "Caller is not a member."
         );
         _;
@@ -67,15 +69,10 @@ contract ParticipationToken is ERC20, Ownable {
         emit TaskManagerAddressSet(_taskManagerAddress);
     }
 
-    function requestTokens(uint256 amount, string memory ipfsHash) public isMember() {
+    function requestTokens(uint256 amount, string memory ipfsHash) public isMember {
         requestCounter++;
-        tokenRequests[requestCounter] = TokenRequest({
-            requester: msg.sender,
-            amount: amount,
-            ipfsHash: ipfsHash,
-            approved: false,
-            exists: true
-        });
+        tokenRequests[requestCounter] =
+            TokenRequest({requester: msg.sender, amount: amount, ipfsHash: ipfsHash, approved: false, exists: true});
         emit TokenRequested(requestCounter, msg.sender, amount, ipfsHash);
     }
 

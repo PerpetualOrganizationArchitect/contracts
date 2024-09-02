@@ -84,7 +84,8 @@ contract ParticipationTokenTest is Test {
         vm.prank(user);
         participationToken.requestTokens(100, "ipfsHash");
 
-        (address requester, uint256 amount, string memory ipfsHash, bool approved, bool exists) = participationToken.tokenRequests(1);
+        (address requester, uint256 amount, string memory ipfsHash, bool approved, bool exists) =
+            participationToken.tokenRequests(1);
 
         assertEq(requester, user);
         assertEq(amount, 100);
@@ -106,7 +107,7 @@ contract ParticipationTokenTest is Test {
         vm.prank(executive);
         participationToken.approveRequest(1);
 
-        (address requester, uint256 amount, , bool approved, ) = participationToken.tokenRequests(1);
+        (address requester, uint256 amount,, bool approved,) = participationToken.tokenRequests(1);
 
         assertEq(approved, true);
         assertEq(participationToken.balanceOf(user), amount);
