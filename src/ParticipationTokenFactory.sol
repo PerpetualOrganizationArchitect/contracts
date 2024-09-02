@@ -6,10 +6,12 @@ import "./ParticipationToken.sol";
 contract ParticipationTokenFactory {
     event TokenCreated(address tokenAddress, string name, string symbol, string POname);
 
-    function createParticipationToken(string memory name, string memory symbol, string memory POname, address nftMembershipAddress)
-        public
-        returns (address)
-    {
+    function createParticipationToken(
+        string memory name,
+        string memory symbol,
+        string memory POname,
+        address nftMembershipAddress
+    ) public returns (address) {
         ParticipationToken newToken = new ParticipationToken(name, symbol, nftMembershipAddress);
         emit TokenCreated(address(newToken), name, symbol, POname);
         return address(newToken);

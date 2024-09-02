@@ -96,7 +96,6 @@ contract ElectionContractTest is Test {
         electionContract.addCandidate(1, candidate1, "Candidate 1");
 
         // Attempting to conclude an election with an invalid winning option should fail
-
         vm.expectRevert("Invalid winning option");
         electionContract.concludeElection(1, 1);
     }
