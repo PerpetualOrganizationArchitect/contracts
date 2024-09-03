@@ -4,7 +4,16 @@ pragma solidity ^0.8.20;
 import "../src/MasterDeployFactory.sol";
 
 contract DeployHybridOrg {
-    function run(address _masterFactory, bool electionEnabled) external returns (address) {
+    function run(
+        address _masterFactory,
+        bool electionEnabled,
+        bool educationHubEnabled // Added educationHubEnabled parameter
+    ) external returns (address) {
+        // Adjust the length of the contractNames array based on the enabled flags
+        uint256 contractCount = 8; // Default count
+        if (electionEnabled) contractCount++;
+        if (educationHubEnabled) contractCount++;
+
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
             executivePermissionNames: new string[](1),
@@ -17,11 +26,12 @@ contract DeployHybridOrg {
             logoURL: "QmLogoHash",
             infoIPFSHash: "QmTestHash",
             votingControlType: "Hybrid",
-            contractNames: new string[](electionEnabled ? 9 : 8),
+            contractNames: new string[](contractCount), // Adjusted length based on enabled flags
             quorumPercentageDD: 50,
             quorumPercentagePV: 50,
             username: "testuser",
-            electionEnabled: electionEnabled
+            electionEnabled: electionEnabled, // Pass the electionEnabled flag
+            educationHubEnabled: educationHubEnabled // Pass the educationHubEnabled flag
         });
 
         // Setting member type names
@@ -42,8 +52,14 @@ contract DeployHybridOrg {
         params.contractNames[7] = "QuickJoin";
 
         // Add ElectionContract if electionEnabled is true
+        uint256 nextIndex = 8;
         if (electionEnabled) {
-            params.contractNames[8] = "ElectionContract";
+            params.contractNames[nextIndex++] = "ElectionContract";
+        }
+
+        // Add EducationHub if educationHubEnabled is true
+        if (educationHubEnabled) {
+            params.contractNames[nextIndex] = "EducationHub";
         }
 
         MasterFactory masterFactory = MasterFactory(_masterFactory);

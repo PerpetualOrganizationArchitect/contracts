@@ -12,6 +12,7 @@ import "./RegistryFactory.sol";
 import "./TaskManagerFactory.sol";
 import "./QuickJoinFactory.sol";
 import "./ElectionContractFactory.sol";
+import "./EducationHubFactory.sol";
 
 contract MasterFactory {
     event DeployParamsLog(
@@ -39,6 +40,7 @@ contract MasterFactory {
     TaskManagerFactory taskManagerFactory;
     QuickJoinFactory quickJoinFactory;
     ElectionContractFactory electionContractFactory;
+    EducationHubFactory educationHubFactory;
     address accountManagerAddress;
 
     struct DeployParams {
@@ -58,6 +60,7 @@ contract MasterFactory {
         uint256 quorumPercentagePV;
         string username;
         bool electionEnabled;
+        bool educationHubEnabled; // Added this field
     }
 
     constructor(
@@ -72,7 +75,8 @@ contract MasterFactory {
         address _taskManagerFactory,
         address _quickJoinFactory,
         address _accountManagerAddress,
-        address _electionContractFactory
+        address _electionContractFactory,
+        address _educationHubFactory
     ) {
         directDemocracyTokenFactory = DirectDemocracyTokenFactory(_directDemocracyTokenFactory);
         directDemocracyVotingFactory = DirectDemocracyVotingFactory(_directDemocracyVotingFactory);
@@ -85,6 +89,7 @@ contract MasterFactory {
         taskManagerFactory = TaskManagerFactory(_taskManagerFactory);
         quickJoinFactory = QuickJoinFactory(_quickJoinFactory);
         electionContractFactory = ElectionContractFactory(_electionContractFactory);
+        educationHubFactory = EducationHubFactory(_educationHubFactory);
         accountManagerAddress = _accountManagerAddress;
     }
 
@@ -106,6 +111,7 @@ contract MasterFactory {
         uint256 totalContracts = 7; // Standard contracts (NFTMembership, DDToken, ParticipationToken, Treasury, DD Voting, TaskManager, QuickJoin)
         if (params.hybridVotingEnabled || params.participationVotingEnabled) totalContracts++;
         if (params.electionEnabled) totalContracts++;
+        if (params.educationHubEnabled) totalContracts++; // Increment for Education Hub if enabled
 
         address[] memory contractAddresses = new address[](totalContracts);
         uint256 contractIndex = 0;
@@ -148,6 +154,15 @@ contract MasterFactory {
             directDemocracyVoting.setElectionsContract(contractAddresses[contractIndex - 1]);
 
             nftMembership.setElectionContract(contractAddresses[contractIndex - 1]);
+        }
+
+        // Deploy the Education Hub if enabled
+        if (params.educationHubEnabled) {
+            contractAddresses[contractIndex++] = deployEducationHub(params.POname, contractAddresses);
+
+            // Set the Education Hub address in the Participation Token
+            IParticipationToken participationToken = IParticipationToken(contractAddresses[2]);
+            participationToken.setEducationHubAddress(contractAddresses[contractIndex - 1]);
         }
 
         // Ensure the contractAddresses array is properly indexed before calling setters
@@ -220,11 +235,7 @@ contract MasterFactory {
         internal
         returns (address)
     {
-        return electionContractFactory.createElectionContract(
-            contractAddresses[0], // NFT Membership Address
-            contractAddresses[4], // Voting Contract Address (Direct Democracy Voting)
-            POname
-        );
+        return electionContractFactory.createElectionContract(contractAddresses[0], contractAddresses[4], POname);
     }
 
     function deployPartcipationVoting(
@@ -277,6 +288,10 @@ contract MasterFactory {
             params.POname,
             params.quorumPercentagePV
         );
+    }
+
+    function deployEducationHub(string memory POname, address[] memory contractAddresses) internal returns (address) {
+        return educationHubFactory.createEducationHub(contractAddresses[0], contractAddresses[2], POname);
     }
 
     function determineVotingControlAddress(string memory votingControlType, address[] memory contractAddresses)

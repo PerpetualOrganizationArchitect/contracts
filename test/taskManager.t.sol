@@ -237,6 +237,8 @@ contract ParticipationTokenMock is ERC20, IParticipationToken {
     function setTaskManagerAddress(address _taskManagerAddress) external override {
         taskManagerAddress = _taskManagerAddress;
     }
+
+    function setEducationHubAddress(address _educationHubAddress) external override {}
 }
 
 contract NFTMembershipMock is INFTMembership4 {

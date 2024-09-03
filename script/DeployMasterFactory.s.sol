@@ -15,6 +15,7 @@ import "../src/QuickJoinFactory.sol";
 import "../src/MasterDeployFactory.sol";
 import "../src/UniversalAccountRegistry.sol";
 import "../src/ElectionContractFactory.sol";
+import "../src/EducationHubFactory.sol"; // Import EducationHubFactory
 
 contract DeployMasterFactory is Script {
     function run() external returns (address masterFactoryAddress) {
@@ -32,6 +33,7 @@ contract DeployMasterFactory is Script {
         TaskManagerFactory taskManagerFactory = new TaskManagerFactory();
         QuickJoinFactory quickJoinFactory = new QuickJoinFactory();
         ElectionContractFactory electionContractFactory = new ElectionContractFactory();
+        EducationHubFactory educationHubFactory = new EducationHubFactory(); // Instantiate EducationHubFactory
 
         MasterFactory masterFactory = new MasterFactory(
             address(directDemocracyTokenFactory),
@@ -45,7 +47,8 @@ contract DeployMasterFactory is Script {
             address(taskManagerFactory),
             address(quickJoinFactory),
             address(accountManager),
-            address(electionContractFactory)
+            address(electionContractFactory),
+            address(educationHubFactory) // Pass EducationHubFactory address to the MasterFactory constructor
         );
 
         vm.stopBroadcast();

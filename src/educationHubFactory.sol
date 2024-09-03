@@ -7,7 +7,10 @@ import "./educationHub.sol";
 contract EducationHubFactory {
     event EducationHubCreated(address indexed educationHubAddress, string POname);
 
-    function createEducationHub(address token, address nftMembershipAddress, string memory POname) public returns (address) {
+    function createEducationHub(address token, address nftMembershipAddress, string memory POname)
+        public
+        returns (address)
+    {
         EducationHub newEducationHub = new EducationHub(token, nftMembershipAddress);
         emit EducationHubCreated(address(newEducationHub), POname);
         return address(newEducationHub);

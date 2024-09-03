@@ -6,8 +6,18 @@ import "../src/MasterDeployFactory.sol";
 contract DeployDirectDemocracyOrg {
     MasterFactory masterFactory;
 
-    function run(address _masterFactory, bool electionEnabled) external returns (address) {
+    function run(
+        address _masterFactory,
+        bool electionEnabled,
+        bool educationHubEnabled // Added educationHubEnabled parameter
+    ) external returns (address) {
         masterFactory = MasterFactory(_masterFactory);
+
+        // Adjust the length of the contractNames array based on the enabled flags
+        uint256 contractCount = 7; // Default count
+        if (electionEnabled) contractCount++;
+        if (educationHubEnabled) contractCount++;
+
         MasterFactory.DeployParams memory params = MasterFactory.DeployParams({
             memberTypeNames: new string[](2),
             executivePermissionNames: new string[](1),
@@ -20,11 +30,12 @@ contract DeployDirectDemocracyOrg {
             logoURL: "QmLogoHash",
             infoIPFSHash: "QmTestHash",
             votingControlType: "DirectDemocracy",
-            contractNames: new string[](electionEnabled ? 8 : 7), // Adjust length to match deployed contracts
+            contractNames: new string[](contractCount), // Adjusted length based on enabled flags
             quorumPercentageDD: 50,
             quorumPercentagePV: 0,
             username: "testuser",
-            electionEnabled: electionEnabled
+            electionEnabled: electionEnabled, // Pass the electionEnabled flag
+            educationHubEnabled: educationHubEnabled // Pass the educationHubEnabled flag
         });
 
         // Setting member type names
@@ -44,8 +55,14 @@ contract DeployDirectDemocracyOrg {
         params.contractNames[6] = "QuickJoin";
 
         // Add ElectionContract if electionEnabled is true
+        uint256 nextIndex = 7;
         if (electionEnabled) {
-            params.contractNames[7] = "ElectionContract";
+            params.contractNames[nextIndex++] = "ElectionContract";
+        }
+
+        // Add EducationHub if educationHubEnabled is true
+        if (educationHubEnabled) {
+            params.contractNames[nextIndex] = "EducationHub";
         }
 
         // Deploy the organization and return the registry address

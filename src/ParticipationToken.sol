@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ParticipationToken is ERC20, Ownable {
     address private taskManagerAddress;
+    address private educationHubAddress;
     INFTMembership9 public nftMembership;
 
     struct TokenRequest {
@@ -30,8 +31,11 @@ contract ParticipationToken is ERC20, Ownable {
         requestCounter = 0;
     }
 
-    modifier onlyTaskManager() {
-        require(msg.sender == taskManagerAddress, "Only the task manager can call this function.");
+    modifier onlyTaskOrEdu() {
+        require(
+            msg.sender == taskManagerAddress || msg.sender == educationHubAddress,
+            "Only the task manager or education hub can call this function."
+        );
         _;
     }
 
@@ -58,7 +62,7 @@ contract ParticipationToken is ERC20, Ownable {
         _;
     }
 
-    function mint(address to, uint256 amount) public onlyTaskManager {
+    function mint(address to, uint256 amount) public onlyTaskOrEdu {
         _mint(to, amount);
         emit Mint(to, amount);
     }
@@ -67,6 +71,11 @@ contract ParticipationToken is ERC20, Ownable {
         require(taskManagerAddress == address(0), "Task manager address already set.");
         taskManagerAddress = _taskManagerAddress;
         emit TaskManagerAddressSet(_taskManagerAddress);
+    }
+
+    function setEducationHubAddress(address _educationHubAddress) external {
+        require(educationHubAddress == address(0), "Education hub address already set.");
+        educationHubAddress = _educationHubAddress;
     }
 
     function requestTokens(uint256 amount, string memory ipfsHash) public isMember {

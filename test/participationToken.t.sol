@@ -55,7 +55,7 @@ contract ParticipationTokenTest is Test {
 
     function testMintFailNotTaskManager() public {
         vm.prank(owner);
-        vm.expectRevert("Only the task manager can call this function.");
+        vm.expectRevert("Only the task manager or education hub can call this function.");
         participationToken.mint(user, 1000);
     }
 

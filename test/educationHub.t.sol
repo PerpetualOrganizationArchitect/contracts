@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/EducationHub.sol";
+import "../src/educationHub.sol";
 
 contract MockParticipationToken2 is IParticipationToken2 {
     mapping(address => uint256) public balances;
