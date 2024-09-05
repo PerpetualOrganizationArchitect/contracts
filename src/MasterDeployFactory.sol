@@ -13,6 +13,7 @@ import "./TaskManagerFactory.sol";
 import "./QuickJoinFactory.sol";
 import "./ElectionContractFactory.sol";
 import "./EducationHubFactory.sol";
+// chnaged name
 
 contract MasterFactory {
     event DeployParamsLog(
