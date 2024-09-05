@@ -291,7 +291,7 @@ contract MasterFactory {
     }
 
     function deployEducationHub(string memory POname, address[] memory contractAddresses) internal returns (address) {
-        return educationHubFactory.createEducationHub(contractAddresses[0], contractAddresses[2], POname);
+        return educationHubFactory.createEducationHub(contractAddresses[2], contractAddresses[0], POname);
     }
 
     function determineVotingControlAddress(string memory votingControlType, address[] memory contractAddresses)
