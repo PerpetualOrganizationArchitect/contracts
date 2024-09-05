@@ -14,15 +14,21 @@ contract NFTMembership is ERC721URIStorage, Ownable {
     mapping(address => string) public memberTypeOf;
     mapping(uint256 => string) public executiveRoleNames;
     mapping(string => bool) public isExecutiveRole;
+    mapping(address => uint256) public lastDowngradeTime;
 
     address quickJoin;
     bool quickJoinSet = false;
+
+    address public electionContract;
+    uint256 private constant ONE_WEEK = 1 weeks;
 
     string private constant DEFAULT_MEMBER_TYPE = "Default";
     string private defaultImageURL;
 
     event mintedNFT(address recipient, string memberTypeName, string tokenURI);
     event membershipTypeChanged(address user, string newMemberType);
+    event MemberRemoved(address user);
+    event ExecutiveDowngraded(address downgradedExecutive, address downgrader);
 
     constructor(string[] memory _memberTypeNames, string[] memory _executiveRoleNames, string memory _defaultImageURL)
         ERC721("MembershipNFT", "MNF")
@@ -42,6 +48,20 @@ contract NFTMembership is ERC721URIStorage, Ownable {
     modifier onlyExecutiveRole() {
         require(isExecutiveRole[memberTypeOf[msg.sender]], "Not an executive role");
         _;
+    }
+
+    modifier canMintCustomNFT() {
+        // require is executive or is voting contract
+        require(
+            isExecutiveRole[memberTypeOf[msg.sender]] || msg.sender == electionContract,
+            "Not an executive role or election contract"
+        );
+        _;
+    }
+
+    function setElectionContract(address _electionContract) public {
+        require(electionContract == address(0), "Election contract already set");
+        electionContract = _electionContract;
     }
 
     function setQuickJoin(address _quickJoin) public {
@@ -64,7 +84,11 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         return memberTypeOf[user];
     }
 
-    function mintNFT(address recipient, string memory memberTypeName) public onlyExecutiveRole {
+    function checkIsExecutive(address user) public view returns (bool) {
+        return isExecutiveRole[memberTypeOf[user]];
+    }
+
+    function mintNFT(address recipient, string memory memberTypeName) public canMintCustomNFT {
         require(bytes(memberTypeImages[memberTypeName]).length > 0, "Image for member type not set");
         string memory tokenURI = memberTypeImages[memberTypeName];
         uint256 tokenId = _nextTokenId++;
@@ -74,16 +98,40 @@ contract NFTMembership is ERC721URIStorage, Ownable {
         emit mintedNFT(recipient, memberTypeName, tokenURI);
     }
 
-    function changeMembershipType(address user, string memory newMemberType) public onlyExecutiveRole {
+    function changeMembershipType(address user, string memory newMemberType) public canMintCustomNFT {
         require(bytes(memberTypeImages[newMemberType]).length > 0, "Image for member type not set");
         memberTypeOf[user] = newMemberType;
         emit membershipTypeChanged(user, newMemberType);
     }
-    // variable for first mint check
+
+    function giveUpExecutiveRole() public onlyExecutiveRole {
+        memberTypeOf[msg.sender] = DEFAULT_MEMBER_TYPE;
+        emit membershipTypeChanged(msg.sender, DEFAULT_MEMBER_TYPE);
+    }
+
+    function removeMember(address user) public onlyExecutiveRole {
+        require(bytes(memberTypeOf[user]).length > 0, "No member type found for user.");
+        delete memberTypeOf[user];
+        emit MemberRemoved(user);
+    }
+
+    function downgradeExecutive(address executive) public onlyExecutiveRole {
+        require(isExecutiveRole[memberTypeOf[executive]], "User is not an executive.");
+        console.log("lastDowngradeTime[msg.sender]: ", lastDowngradeTime[msg.sender]);
+        console.log("block.timestamp: ", block.timestamp);
+        require(
+            block.timestamp >= lastDowngradeTime[msg.sender] + ONE_WEEK, "Downgrade limit reached. Try again in a week."
+        );
+
+        memberTypeOf[executive] = DEFAULT_MEMBER_TYPE;
+        lastDowngradeTime[msg.sender] = block.timestamp;
+        emit ExecutiveDowngraded(executive, msg.sender);
+    }
 
     bool public firstMint = true;
 
     function mintDefaultNFT(address newUser) public onlyQuickJoin {
+        require(bytes(memberTypeOf[newUser]).length == 0, "User is already a member.");
         string memory tokenURI = defaultImageURL;
         uint256 tokenId = _nextTokenId++;
         _mint(newUser, tokenId);

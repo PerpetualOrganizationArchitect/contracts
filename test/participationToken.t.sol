@@ -10,11 +10,30 @@ contract ParticipationTokenTest is Test {
     address public taskManager = address(2);
     address public user = address(3);
     address public otherUser = address(4);
+    address public nftMembership = address(5);
+    address public executive = address(6);
 
     function setUp() public {
-        participationToken = new ParticipationToken("Participation Token", "PT");
+        participationToken = new ParticipationToken("Participation Token", "PT", nftMembership);
 
         participationToken.setTaskManagerAddress(taskManager);
+
+        // Mocking the INFTMembership9 contract to return specific roles for addresses
+        vm.mockCall(
+            nftMembership,
+            abi.encodeWithSelector(INFTMembership9.checkMemberTypeByAddress.selector, user),
+            abi.encode("Member")
+        );
+        vm.mockCall(
+            nftMembership,
+            abi.encodeWithSelector(INFTMembership9.checkMemberTypeByAddress.selector, executive),
+            abi.encode("Executive")
+        );
+        vm.mockCall(
+            nftMembership,
+            abi.encodeWithSelector(INFTMembership9.checkMemberTypeByAddress.selector, otherUser),
+            abi.encode("")
+        );
     }
 
     function testSetTaskManagerAddress() public {
@@ -36,7 +55,7 @@ contract ParticipationTokenTest is Test {
 
     function testMintFailNotTaskManager() public {
         vm.prank(owner);
-        vm.expectRevert("Only the task manager can call this function.");
+        vm.expectRevert("Only the task manager or education hub can call this function.");
         participationToken.mint(user, 1000);
     }
 
@@ -59,5 +78,74 @@ contract ParticipationTokenTest is Test {
         vm.prank(otherUser);
         vm.expectRevert("Transfers are disabled.");
         participationToken.transferFrom(user, otherUser, 500);
+    }
+
+    function testRequestTokens() public {
+        vm.prank(user);
+        participationToken.requestTokens(100, "ipfsHash");
+
+        (address requester, uint256 amount, string memory ipfsHash, bool approved, bool exists) =
+            participationToken.tokenRequests(1);
+
+        assertEq(requester, user);
+        assertEq(amount, 100);
+        assertEq(ipfsHash, "ipfsHash");
+        assertEq(approved, false);
+        assertEq(exists, true);
+    }
+
+    function testRequestTokensFailNonMember() public {
+        vm.prank(otherUser);
+        vm.expectRevert("Caller is not a member.");
+        participationToken.requestTokens(100, "ipfsHash");
+    }
+
+    function testApproveRequest() public {
+        vm.prank(user);
+        participationToken.requestTokens(100, "ipfsHash");
+
+        vm.prank(executive);
+        participationToken.approveRequest(1);
+
+        (address requester, uint256 amount,, bool approved,) = participationToken.tokenRequests(1);
+
+        assertEq(approved, true);
+        assertEq(participationToken.balanceOf(user), amount);
+    }
+
+    function testApproveRequestFailNonExecutive() public {
+        vm.prank(user);
+        participationToken.requestTokens(100, "ipfsHash");
+
+        vm.prank(user);
+        vm.expectRevert("Caller is not an executive.");
+        participationToken.approveRequest(1);
+    }
+
+    function testApproveRequestFailRequester() public {
+        vm.prank(executive);
+        participationToken.requestTokens(100, "ipfsHash");
+
+        vm.prank(executive);
+        vm.expectRevert("Requester cannot approve their own request.");
+        participationToken.approveRequest(1);
+    }
+
+    function testApproveRequestFailNonExistentRequest() public {
+        vm.prank(executive);
+        vm.expectRevert("Request does not exist.");
+        participationToken.approveRequest(1);
+    }
+
+    function testApproveRequestFailAlreadyApproved() public {
+        vm.prank(user);
+        participationToken.requestTokens(100, "ipfsHash");
+
+        vm.prank(executive);
+        participationToken.approveRequest(1);
+
+        vm.prank(executive);
+        vm.expectRevert("Request already approved.");
+        participationToken.approveRequest(1);
     }
 }

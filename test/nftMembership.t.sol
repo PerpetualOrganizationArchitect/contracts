@@ -11,6 +11,8 @@ contract NFTMembershipTest is Test {
     address public executive = address(2);
     address public user = address(3);
     address public quickJoin = address(4);
+    address public anotherExecutive = address(5);
+    address public thirdExecutive = address(6);
 
     string[] public memberTypeNames = ["Default", "Gold", "Silver", "Executive"];
     string[] public executiveRoleNames = ["Executive"];
@@ -22,12 +24,21 @@ contract NFTMembershipTest is Test {
 
         vm.prank(quickJoin);
         nftMembership.mintDefaultNFT(executive);
+
+        vm.prank(executive);
+        nftMembership.mintNFT(anotherExecutive, "Executive");
+
+        vm.prank(executive);
+        nftMembership.mintNFT(thirdExecutive, "Executive");
     }
 
     function testDefaultMintExecutive() public {
         assertEq(nftMembership.balanceOf(executive), 1);
         assertEq(nftMembership.checkMemberTypeByAddress(executive), "Executive");
         assertEq(nftMembership.tokenURI(0), defaultImageURL);
+
+        assertEq(nftMembership.balanceOf(anotherExecutive), 1);
+        assertEq(nftMembership.checkMemberTypeByAddress(anotherExecutive), "Executive");
     }
 
     function testSetQuickJoin() public {
@@ -37,12 +48,12 @@ contract NFTMembershipTest is Test {
     function testMintDefaultNFT() public {
         vm.prank(quickJoin);
 
-        address user2 = address(5);
+        address user2 = address(7);
         nftMembership.mintDefaultNFT(user2);
 
         assertEq(nftMembership.balanceOf(user2), 1);
         assertEq(nftMembership.checkMemberTypeByAddress(user2), "Default");
-        assertEq(nftMembership.tokenURI(1), defaultImageURL);
+        assertEq(nftMembership.tokenURI(2), defaultImageURL);
     }
 
     function testMintNFT() public {
@@ -64,6 +75,56 @@ contract NFTMembershipTest is Test {
         assertEq(nftMembership.checkMemberTypeByAddress(user), "Silver");
     }
 
+    function testGiveUpExecutiveRole() public {
+        vm.prank(executive);
+        nftMembership.giveUpExecutiveRole();
+
+        assertEq(nftMembership.checkMemberTypeByAddress(executive), "Default");
+    }
+
+    function testRemoveMember() public {
+        vm.prank(executive);
+        nftMembership.mintNFT(user, "Gold");
+
+        vm.prank(executive);
+        nftMembership.removeMember(user);
+
+        vm.expectRevert("No member type found for user.");
+        nftMembership.checkMemberTypeByAddress(user);
+    }
+
+    function testDowngradeExecutive() public {
+        vm.warp(block.timestamp + 1 weeks);
+        vm.prank(executive);
+        nftMembership.downgradeExecutive(anotherExecutive);
+
+        assertEq(nftMembership.checkMemberTypeByAddress(anotherExecutive), "Default");
+    }
+
+    function testDowngradeExecutive_SameWeek() public {
+        vm.warp(block.timestamp + 1 weeks);
+        vm.prank(executive);
+        nftMembership.downgradeExecutive(anotherExecutive);
+
+        vm.prank(executive);
+        vm.expectRevert("Downgrade limit reached. Try again in a week.");
+        nftMembership.downgradeExecutive(thirdExecutive);
+    }
+
+    function testDowngradeExecutive_AfterWeek() public {
+        vm.warp(block.timestamp + 1 weeks);
+        vm.prank(executive);
+        nftMembership.downgradeExecutive(anotherExecutive);
+
+        // Advance time by one week
+        vm.warp(block.timestamp + 2 weeks);
+
+        vm.prank(executive);
+        nftMembership.downgradeExecutive(thirdExecutive);
+
+        assertEq(nftMembership.checkMemberTypeByAddress(thirdExecutive), "Default");
+    }
+
     function testFailMintNFT_NotExecutive() public {
         vm.prank(user);
         nftMembership.mintNFT(user, "Gold");
@@ -72,6 +133,7 @@ contract NFTMembershipTest is Test {
     function testFailChangeMembershipType_NotExecutive() public {
         vm.prank(executive);
         nftMembership.mintNFT(user, "Gold");
+        assertEq(nftMembership.checkMemberTypeByAddress(user), "Gold");
 
         vm.prank(user);
         nftMembership.changeMembershipType(user, "Silver");

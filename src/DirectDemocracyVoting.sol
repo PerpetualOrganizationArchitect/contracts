@@ -13,10 +13,21 @@ interface ITreasury {
     function withdrawEther(address payable _to, uint256 _amount) external;
 }
 
+interface IElections {
+    function createElection(uint256 _proposalId) external returns (uint256, uint256);
+
+    function addCandidate(uint256 _proposalId, address _candidateAddress, string memory _candidateName) external;
+
+    function concludeElection(uint256 _electionId, uint256 winningOption) external;
+}
+
 contract DirectDemocracyVoting {
     IERC20 public DirectDemocracyToken;
     INFTMembership2 public nftMembership;
     ITreasury public treasury;
+    IElections public elections;
+
+    bool private electionSet = false;
 
     uint256 public quorumPercentage = 50;
 
@@ -35,6 +46,7 @@ contract DirectDemocracyVoting {
         uint256 transferAmount;
         bool transferEnabled;
         address transferToken;
+        bool electionEnabled;
     }
 
     Proposal[] private proposals;
@@ -49,11 +61,14 @@ contract DirectDemocracyVoting {
         address transferRecipient,
         uint256 transferAmount,
         bool transferEnabled,
-        address transferToken
+        address transferToken,
+        bool electionEnabled,
+        uint256 electionId
     );
     event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex);
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
+    event ElectionContractSet(address indexed electionContract);
 
     mapping(string => bool) private allowedRoles;
 
@@ -108,8 +123,13 @@ contract DirectDemocracyVoting {
         address payable _transferRecipient,
         uint256 _transferAmount,
         bool _transferEnabled,
-        address _transferToken
+        address _transferToken,
+        bool _electionEnabled,
+        address[] memory _candidateAddresses,
+        string[] memory _candidateNames
     ) external canCreateProposal {
+        require(_candidateAddresses.length == _candidateNames.length, "Candidates and names length mismatch");
+
         Proposal storage newProposal = proposals.push();
         newProposal.totalVotes = 0;
         newProposal.timeInMinutes = _timeInMinutes;
@@ -117,8 +137,25 @@ contract DirectDemocracyVoting {
         newProposal.transferTriggerOptionIndex = _transferTriggerOptionIndex;
         newProposal.transferRecipient = _transferRecipient;
         newProposal.transferAmount = _transferAmount;
+        newProposal.transferEnabled = _transferEnabled;
+        newProposal.transferToken = _transferToken;
+        newProposal.electionEnabled = _electionEnabled;
 
         uint256 proposalId = proposals.length - 1;
+
+        for (uint256 i = 0; i < _optionNames.length; i++) {
+            newProposal.options.push(PollOption(0));
+            emit PollOptionNames(proposalId, i, _optionNames[i]);
+        }
+
+        uint256 electionId;
+
+        if (_electionEnabled) {
+            (electionId,) = elections.createElection(proposalId);
+            for (uint256 i = 0; i < _candidateAddresses.length; i++) {
+                elections.addCandidate(proposalId, _candidateAddresses[i], _candidateNames[i]);
+            }
+        }
         emit NewProposal(
             proposalId,
             _name,
@@ -129,13 +166,10 @@ contract DirectDemocracyVoting {
             _transferRecipient,
             _transferAmount,
             _transferEnabled,
-            _transferToken
+            _transferToken,
+            _electionEnabled,
+            electionId
         );
-
-        for (uint256 i = 0; i < _optionNames.length; i++) {
-            newProposal.options.push(PollOption(0));
-            emit PollOptionNames(proposalId, i, _optionNames[i]);
-        }
     }
 
     function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
@@ -171,6 +205,10 @@ contract DirectDemocracyVoting {
                     proposals[_proposalId].transferAmount
                 );
             }
+        }
+
+        if (proposals[_proposalId].electionEnabled && hasValidWinner) {
+            elections.concludeElection(_proposalId, winningOptionIndex);
         }
 
         emit WinnerAnnounced(_proposalId, winningOptionIndex, hasValidWinner);
@@ -254,5 +292,12 @@ contract DirectDemocracyVoting {
     // Getter function to get the number of proposals
     function getProposalsCount() public view returns (uint256) {
         return proposals.length;
+    }
+
+    function setElectionsContract(address _electionsContract) public {
+        require(!electionSet, "Election contract already set");
+        elections = IElections(_electionsContract);
+        electionSet = true;
+        emit ElectionContractSet(_electionsContract);
     }
 }

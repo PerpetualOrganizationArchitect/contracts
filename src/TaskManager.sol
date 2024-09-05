@@ -12,6 +12,7 @@ interface INFTMembership4 {
 interface IParticipationToken is IERC20 {
     function mint(address to, uint256 amount) external;
     function setTaskManagerAddress(address _taskManagerAddress) external;
+    function setEducationHubAddress(address _educationHubAddress) external;
 }
 
 contract TaskManager {
