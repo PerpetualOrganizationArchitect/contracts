@@ -65,7 +65,9 @@ contract DirectDemocracyVoting {
         bool electionEnabled,
         uint256 electionId
     );
-    event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex);
+
+    event Voted(uint256 indexed proposalId, address indexed voter, uint256[] optionIndices, uint256[] weights);
+
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
     event ElectionContractSet(address indexed electionContract);
@@ -172,7 +174,10 @@ contract DirectDemocracyVoting {
         );
     }
 
-    function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
+    function vote(uint256 _proposalId, address _voter, uint256[] memory _optionIndices, uint256[] memory _weights)
+        external
+        whenNotExpired(_proposalId)
+    {
         uint256 balance = DirectDemocracyToken.balanceOf(_voter);
         require(balance > 0, "No democracy tokens");
 
@@ -180,11 +185,24 @@ contract DirectDemocracyVoting {
         Proposal storage proposal = proposals[_proposalId];
         require(!proposal.hasVoted[_voter], "Already voted");
 
+        // Sum of weights must be 100 (for percentage-based voting)
+        uint256 totalWeight = 0;
+        for (uint256 i = 0; i < _weights.length; i++) {
+            totalWeight += _weights[i];
+        }
+        require(totalWeight == 100, "Total weight must be 100");
+
         proposal.hasVoted[_voter] = true;
         proposal.totalVotes += 1;
-        proposal.options[_optionIndex].votes += 1;
 
-        emit Voted(_proposalId, _voter, _optionIndex);
+        for (uint256 i = 0; i < _optionIndices.length; i++) {
+            uint256 optionIndex = _optionIndices[i];
+            require(optionIndex < proposal.options.length, "Invalid option index");
+
+            proposal.options[optionIndex].votes += _weights[i];
+        }
+
+        emit Voted(_proposalId, _voter, _optionIndices, _weights);
     }
 
     function announceWinner(uint256 _proposalId) external whenExpired(_proposalId) returns (uint256, bool) {

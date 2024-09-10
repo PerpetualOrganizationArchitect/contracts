@@ -11,13 +11,22 @@ contract Registry {
     string public infoHash;
     string public logoURL;
 
+    INFTMembership12 public nftMembership;
+
     event ContractAdded(string name, address contractAddress);
     event ContractUpgraded(string name, address newAddress);
     event VotingControlAddressSet(address newAddress);
     event Initialized(address VotingControlAddress, string[] contractNames, address[] contractAddresses);
+    event infoChange(string ipfsHash, string POname);
+    event logoChange(string newLogo, string POname);
 
     modifier onlyVoting() {
         require(msg.sender == VotingControlAddress, "Not authorized");
+        _;
+    }
+
+    modifier isExecutive() {
+        require(nftMembership.checkIsExecutive(msg.sender), "Not an executive");
         _;
     }
 
@@ -32,9 +41,12 @@ contract Registry {
         POname = name;
         infoHash = hashInfo;
         logoURL = logo;
+
         require(
             contractNames.length == contractAddresses.length, "Contract names and addresses must be of the same length"
         );
+
+        nftMembership = INFTMembership12(contractAddresses[0]);
         VotingControlAddress = _VotingControlAddress;
         for (uint256 i = 0; i < contractNames.length; i++) {
             contracts[contractNames[i]] = contractAddresses[i];
@@ -59,4 +71,19 @@ contract Registry {
         contracts[name] = newAddress;
         emit ContractUpgraded(name, newAddress);
     }
+
+    function changeOrgInfo(string memory ipfsHash) public isExecutive {
+        infoHash = ipfsHash;
+        emit infoChange(ipfsHash, POname);
+    }
+
+    function changeLogo(string memory newLogo) public isExecutive {
+        logoURL = newLogo;
+        emit logoChange(newLogo, POname);
+    }
+}
+
+interface INFTMembership12 {
+    function checkMemberTypeByAddress(address user) external view returns (string memory);
+    function checkIsExecutive(address user) external view returns (bool);
 }
