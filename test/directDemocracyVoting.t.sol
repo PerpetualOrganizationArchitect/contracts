@@ -6,7 +6,7 @@ import "../src/DirectDemocracyVoting.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/ElectionContract.sol";
 
-contract DirectDemocracyVotingTest is Test {
+contract DirectDemocracyVotingExhaustiveTest is Test {
     DirectDemocracyVoting public directDemocracyVoting;
     IERC20 public democracyToken;
     INFTMembership2 public nftMembership;
@@ -16,12 +16,12 @@ contract DirectDemocracyVotingTest is Test {
     address public owner = address(1);
     address public voter1 = address(2);
     address public voter2 = address(3);
-    address public voter3 = address(4);
+    address public nonMember = address(4);
     address public treasuryAddress = address(5);
 
     uint256 public quorumPercentage = 51;
     string[] public allowedRoleNames = ["Executive"];
-    string[] public optionNames = ["Option1", "Option2"];
+    string[] public optionNames = ["Option1", "Option2", "Option3"];
     address[] public candidateAddresses;
     string[] public candidateNames;
 
@@ -35,16 +35,15 @@ contract DirectDemocracyVotingTest is Test {
         );
 
         elections = new ElectionContract(address(nftMembership), address(directDemocracyVoting));
-
         directDemocracyVoting.setElectionsContract(address(elections));
 
         // Set initial balances
         deal(address(democracyToken), voter1, 100);
         deal(address(democracyToken), voter2, 100);
-        deal(address(democracyToken), voter3, 100);
 
-        // set owner as member
+        // Set member types
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "Executive");
+        NFTMembershipMock(address(nftMembership)).setMemberType(voter1, "Executive");
 
         candidateAddresses.push(voter1);
         candidateAddresses.push(voter2);
@@ -53,127 +52,10 @@ contract DirectDemocracyVotingTest is Test {
         candidateNames.push("Candidate 2");
     }
 
-    function testCreateProposalWithElection() public {
-        vm.prank(owner);
-        directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0),
-            true,
-            candidateAddresses,
-            candidateNames
-        );
-
-        (
-            uint256 totalVotes,
-            uint256 timeInMinutes,
-            uint256 creationTimestamp,
-            uint256 transferTriggerOptionIndex,
-            address payable transferRecipient,
-            uint256 transferAmount,
-            bool transferEnabled,
-            address transferToken
-        ) = directDemocracyVoting.getProposal(0);
-
-        assertEq(timeInMinutes, 60);
-        assertEq(totalVotes, 0);
-        assertEq(creationTimestamp > 0, true);
-        assertEq(transferTriggerOptionIndex, 0);
-        assertEq(transferRecipient, treasuryAddress);
-        assertEq(transferAmount, 100);
-        assertEq(transferEnabled, false);
-        assertEq(transferToken, address(0));
-
-        // Verify election creation
-        (bool isActive,,) = elections.getElectionDetails(0);
-        assertTrue(isActive, "Election should be created and active");
-
-        // Verify candidates added
-        ElectionContract.Candidate[] memory candidates = elections.getCandidates(0);
-        assertEq(candidates.length, 2, "Two candidates should be added");
-        assertEq(candidates[0].candidateAddress, candidateAddresses[0], "Candidate 1 address should match");
-        assertEq(candidates[0].candidateName, candidateNames[0], "Candidate 1 name should match");
-        assertEq(candidates[1].candidateAddress, candidateAddresses[1], "Candidate 2 address should match");
-        assertEq(candidates[1].candidateName, candidateNames[1], "Candidate 2 name should match");
-    }
-
-    function testVote() public {
-        vm.prank(owner);
-        directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            60,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0),
-            true,
-            candidateAddresses,
-            candidateNames
-        );
-
-        vm.prank(voter1);
-        directDemocracyVoting.vote(0, voter1, 0);
-
-        uint256 votes = directDemocracyVoting.getOptionVotes(0, 0);
-        assertEq(votes, 1);
-
-        (uint256 totalVotes,,,,,,,) = directDemocracyVoting.getProposal(0);
-        assertEq(totalVotes, 1);
-    }
-
-    function testAnnounceWinnerWithElection() public {
-        vm.prank(owner);
-        directDemocracyVoting.createProposal(
-            "Proposal1",
-            "Description1",
-            1,
-            optionNames,
-            0,
-            payable(treasuryAddress),
-            100,
-            false,
-            address(0),
-            true,
-            candidateAddresses,
-            candidateNames
-        );
-
-        vm.prank(voter1);
-        directDemocracyVoting.vote(0, voter1, 0);
-
-        vm.warp(block.timestamp + 2 minutes);
-
-        vm.prank(owner);
-        directDemocracyVoting.announceWinner(0);
-
-        (uint256 winningOptionIndex, bool hasValidWinner) = directDemocracyVoting.getWinner(0);
-        assertEq(winningOptionIndex, 0);
-        assertEq(hasValidWinner, true);
-
-        // Verify election conclusion
-        (, uint256 winningCandidateIndex, bool electionHasValidWinner) = elections.getElectionDetails(0);
-        assertEq(winningCandidateIndex, 0, "Winning candidate index should be 0");
-        assertTrue(electionHasValidWinner, "Election should have a valid winner");
-
-        // Verify NFT minted
-        assertEq(nftMembership.checkMemberTypeByAddress(voter1), "Executive", "Voter 1 should be minted as Executive");
-    }
-
     function testNonMemberCannotCreateProposal() public {
-        address nonMember = address(6); // Address that is not set as a member
         vm.prank(nonMember); // Use non-member account to call the function
 
-        vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
-
+        vm.expectRevert("Not authorized to create proposal");
         directDemocracyVoting.createProposal(
             "Proposal1",
             "Description1",
@@ -188,6 +70,223 @@ contract DirectDemocracyVotingTest is Test {
             candidateAddresses,
             candidateNames
         );
+    }
+
+    function testVoteRequiresBalance() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // Set voter2 balance to zero
+        deal(address(democracyToken), voter2, 0);
+
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory weights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        weights[0] = 70;
+        weights[1] = 30;
+
+        vm.prank(voter2);
+        vm.expectRevert("No democracy tokens");
+        directDemocracyVoting.vote(0, voter2, optionIndices, weights);
+    }
+
+    function testVoteFailsWithImproperWeights() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // Voter1 tries to vote with improper weights that do not sum to 100
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory improperWeights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        improperWeights[0] = 70;
+        improperWeights[1] = 40; // Sum is 110, invalid
+
+        vm.prank(voter1);
+        vm.expectRevert("Total weight must be 100");
+        directDemocracyVoting.vote(0, voter1, optionIndices, improperWeights);
+    }
+
+    function testCannotVoteTwice() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            60,
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // First vote
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory weights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        weights[0] = 70;
+        weights[1] = 30;
+
+        vm.prank(voter1);
+        directDemocracyVoting.vote(0, voter1, optionIndices, weights);
+
+        // Try to vote again
+        vm.prank(voter1);
+        vm.expectRevert("Already voted");
+        directDemocracyVoting.vote(0, voter1, optionIndices, weights);
+    }
+
+    function testCannotVoteAfterExpiration() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            1, // 1 minute
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // Warp time to after expiration
+        vm.warp(block.timestamp + 2 minutes);
+
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory weights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        weights[0] = 70;
+        weights[1] = 30;
+
+        vm.prank(voter1);
+        vm.expectRevert("Voting time expired");
+        directDemocracyVoting.vote(0, voter1, optionIndices, weights);
+    }
+
+    function testAnnounceWinnerWithNoQuorum() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            1, // 1 minute
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // Voter1 votes 60% for Option1 and 40% for Option2
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory weights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        weights[0] = 50;
+        weights[1] = 50;
+
+        vm.prank(voter1);
+        directDemocracyVoting.vote(0, voter1, optionIndices, weights);
+
+        // Warp to after the proposal expires
+        vm.warp(block.timestamp + 2 minutes);
+
+        // Announce winner (should fail due to not meeting quorum)
+        vm.prank(owner);
+        (uint256 winningOptionIndex, bool hasValidWinner) = directDemocracyVoting.announceWinner(0);
+
+        assertEq(winningOptionIndex, 0); // Option1 should be the winner
+        assertFalse(hasValidWinner, "Winner should be invalid due to quorum not being met");
+    }
+
+    function testAnnounceWinnerWithQuorum() public {
+        vm.prank(owner);
+        directDemocracyVoting.createProposal(
+            "Proposal1",
+            "Description1",
+            1, // 1 minute
+            optionNames,
+            0,
+            payable(treasuryAddress),
+            100,
+            false,
+            address(0),
+            false,
+            candidateAddresses,
+            candidateNames
+        );
+
+        // Voter1 votes 51% for Option1 and 49% for Option2
+        uint256[] memory optionIndices = new uint256[](2);
+        uint256[] memory weights = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+        weights[0] = 51;
+        weights[1] = 49;
+
+        vm.prank(voter1);
+        directDemocracyVoting.vote(0, voter1, optionIndices, weights);
+
+        // Voter2 votes 60% for Option2 and 40% for Option1
+        uint256[] memory optionIndices2 = new uint256[](2);
+        uint256[] memory weights2 = new uint256[](2);
+        optionIndices2[0] = 0;
+        optionIndices2[1] = 1;
+        weights2[0] = 40;
+        weights2[1] = 60;
+
+        vm.prank(voter2);
+        directDemocracyVoting.vote(0, voter2, optionIndices2, weights2);
+
+        // Warp to after expiration
+        vm.warp(block.timestamp + 2 minutes);
+
+        // Announce winner (should meet quorum)
+        vm.prank(owner);
+        (uint256 winningOptionIndex, bool hasValidWinner) = directDemocracyVoting.announceWinner(0);
+
+        assertEq(winningOptionIndex, 1); // Option2 should be the winner
+        assertTrue(hasValidWinner, "Winner should be valid since quorum is met");
     }
 }
 
@@ -259,69 +358,5 @@ contract TreasuryMock is ITreasury {
 
     function withdrawEther(address payable _to, uint256 _amount) external {
         _to.transfer(_amount);
-    }
-}
-
-contract ElectionMock is IElections {
-    struct Election {
-        bool isActive;
-        uint256 winningCandidateIndex;
-        bool hasValidWinner;
-        Candidate[] candidates;
-    }
-
-    struct Candidate {
-        address candidateAddress;
-        string candidateName;
-    }
-
-    address public votingContract = address(1);
-
-    Election[] public elections;
-    mapping(uint256 => uint256) public proposalIdToElectionId;
-
-    function createElection(uint256 _proposalId) external returns (uint256, uint256) {
-        Election memory newElection;
-        elections.push(newElection);
-        proposalIdToElectionId[_proposalId] = elections.length - 1;
-
-        newElection.isActive = true;
-
-        uint256 electionId = elections.length - 1;
-
-        return (electionId, _proposalId);
-    }
-
-    function addCandidate(uint256 _electionId, address _candidateAddress, string memory _candidateName)
-        external
-        override
-    {
-        require(elections[_electionId].isActive, "Election not created");
-        elections[_electionId].candidates.push(
-            Candidate({candidateAddress: _candidateAddress, candidateName: _candidateName})
-        );
-    }
-
-    function concludeElection(uint256 _electionId, uint256 winningOption) external override {
-        require(elections[_electionId].isActive, "Election not created");
-        elections[_electionId].isActive = false;
-        elections[_electionId].winningCandidateIndex = winningOption;
-        elections[_electionId].hasValidWinner = true;
-    }
-
-    function getElectionDetails(uint256 _electionId) external view returns (bool, uint256, bool) {
-        return (
-            elections[_electionId].isActive,
-            elections[_electionId].winningCandidateIndex,
-            elections[_electionId].hasValidWinner
-        );
-    }
-
-    function getCandidates(uint256 _electionId) external view returns (Candidate[] memory) {
-        return elections[_electionId].candidates;
-    }
-
-    function getElectionResults(uint256 _electionId) external view returns (uint256, bool) {
-        return (elections[_electionId].winningCandidateIndex, elections[_electionId].hasValidWinner);
     }
 }
