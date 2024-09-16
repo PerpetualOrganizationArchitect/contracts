@@ -180,6 +180,61 @@ contract HybridVotingTest is Test {
         assertEq(hasValidWinner, true);
     }
 
+    function testCannotCreateProposalNotAllowed() public {
+        vm.prank(voter1); // voter1 is not in allowedRoles
+        vm.expectRevert("Not authorized to create proposal");
+        hybridVoting.createProposal(
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+    }
+
+    function testAnnounceWinnerQuorumNotReached() public {
+        vm.prank(owner);
+        hybridVoting.createProposal(
+            "Proposal1", "Description1", 1, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+
+        // No votes cast
+
+        // Advance time to make the proposal expire
+        vm.warp(block.timestamp + 2 minutes);
+
+        vm.prank(owner);
+        (uint256 winningOptionIndex, bool hasValidWinner) = hybridVoting.announceWinner(0);
+
+        assertEq(hasValidWinner, false); // Quorum not reached
+    }
+
+    function testCannotAnnounceWinnerBeforeProposalExpired() public {
+        vm.prank(owner);
+        hybridVoting.createProposal(
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+
+        vm.prank(owner);
+        vm.expectRevert("Voting is not yet closed");
+        hybridVoting.announceWinner(0);
+    }
+
+    function testAnnounceWinnerWithZeroTotalVotes() public {
+        vm.prank(owner);
+        hybridVoting.createProposal(
+            "Proposal1", "Description1", 1, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+
+        // No votes cast
+
+        // Advance time to make the proposal expire
+        vm.warp(block.timestamp + 2 minutes);
+
+        vm.prank(owner);
+        (uint256 winningOptionIndex, bool hasValidWinner) = hybridVoting.announceWinner(0);
+
+        // Ensure no division by zero occurs and the function handles it
+        assertEq(hasValidWinner, false);
+    }
+
+
 
     function testLeftoverTokenDistributionWithQuadraticVoting() public {
         vm.prank(owner);

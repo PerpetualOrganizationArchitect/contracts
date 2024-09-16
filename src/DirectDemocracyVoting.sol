@@ -241,8 +241,11 @@ contract DirectDemocracyVoting {
         uint256 highestVotes = 0;
         uint256 winningOptionIndex = 0;
         bool hasValidWinner = false;
-        console.log("proposal.totalVotes: %d", proposal.totalVotes);
-        console.log("quorumPercentage: %d", quorumPercentage);
+        // if no votes, no winner
+        if (proposal.totalVotes == 0) {
+            return (winningOptionIndex, hasValidWinner);
+        }
+
         uint256 quorumThreshold = (proposal.totalVotes * quorumPercentage);
 
         // Determine the option with the highest votes that meets or exceeds the quorum

@@ -210,6 +210,11 @@ contract ParticipationVoting {
         bool hasValidWinner = false;
         uint256 quorumThreshold = (proposal.totalVotes * quorumPercentage);
 
+        //if no votes, no winner
+        if (proposal.totalVotes == 0) {
+            return (winningOptionIndex, hasValidWinner);
+        }
+
         // Determine the option with the highest votes that meets or exceeds the quorum
         for (uint256 i = 0; i < proposal.options.length; i++) {
             if (proposal.options[i].votes > highestVotes) {

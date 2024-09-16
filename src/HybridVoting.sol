@@ -187,6 +187,7 @@ contract HybridVoting {
 
         Proposal storage proposal = proposals[_proposalId];
         require(!proposal.hasVoted[_voter], "Already voted");
+        require(_optionIndices.length == proposal.options.length, "Invalid option indices length");
 
         // Apply quadratic voting if enabled
         uint256 voteWeightPT = quadraticVotingEnabled ? calculateQuadraticVoteWeight(balancePT) : balancePT;
@@ -289,6 +290,11 @@ contract HybridVoting {
     function getWinner(uint256 _proposalId) internal view returns (uint256, bool) {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
+
+        //if no votes no winner 
+        if (proposal.totalVotesPT == 0 && proposal.totalVotesDDT == 0) {
+            return (0, false);
+        }
 
         uint256 winningVotes = 0;
         uint256 winningOptionIndex = 0;
