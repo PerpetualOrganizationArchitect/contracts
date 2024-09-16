@@ -49,7 +49,7 @@ contract ParticipationVoting {
         bool transferEnabled,
         address transferToken
     );
-    event Voted(uint256 indexed proposalId, address indexed voter, uint256 optionIndex, uint256 voteWeight);
+    event Voted(uint256 indexed proposalId, address indexed voter, uint256[] optionIndices, uint256[] weights);
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
 
@@ -143,7 +143,10 @@ contract ParticipationVoting {
         }
     }
 
-    function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
+    function vote(uint256 _proposalId, address _voter, uint256[] memory _optionIndices, uint256[] memory _weights)
+        external
+        whenNotExpired(_proposalId)
+    {
         uint256 balance = ParticipationToken.balanceOf(_voter);
         require(balance > 0, "No participation tokens");
 
@@ -153,11 +156,23 @@ contract ParticipationVoting {
 
         uint256 voteWeight = quadraticVotingEnabled ? calculateQuadraticVoteWeight(balance) : balance;
 
-        proposal.hasVoted[_voter] = true;
-        proposal.totalVotes += voteWeight;
-        proposal.options[_optionIndex].votes += voteWeight;
+        uint256 totalWeight = 0;
+        for (uint256 i = 0; i < _weights.length; i++) {
+            totalWeight += _weights[i];
+        }
+        require(totalWeight == 100, "Total weight must be 100");
 
-        emit Voted(_proposalId, _voter, _optionIndex, voteWeight);
+        proposal.hasVoted[_voter] = true;
+        proposal.totalVotes += 1;
+
+        for (uint256 i = 0; i < _optionIndices.length; i++) {
+            uint256 optionIndex = _optionIndices[i];
+            require(optionIndex < proposal.options.length, "Invalid option index");
+
+            proposal.options[optionIndex].votes += (voteWeight * _weights[i]);
+        }
+
+        emit Voted(_proposalId, _voter, _optionIndices, _weights);
     }
 
     function calculateQuadraticVoteWeight(uint256 _balance) internal pure returns (uint256) {

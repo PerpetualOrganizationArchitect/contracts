@@ -191,7 +191,6 @@ contract HybridVoting {
 
         // Apply quadratic voting if enabled
         uint256 voteWeightPT = quadraticVotingEnabled ? calculateQuadraticVoteWeight(balancePT) : balancePT;
-        
 
         proposal.hasVoted[_voter] = true;
 
@@ -206,8 +205,8 @@ contract HybridVoting {
             require(optionIndex < proposal.options.length, "Invalid option index");
 
             // Calculate the votes for each option based on the weight percentage
-            uint256 weightPT = (voteWeightPT * _weights[i]) ;
-            uint256 weightDDT = (balanceDDT * _weights[i]) ;
+            uint256 weightPT = (voteWeightPT * _weights[i]);
+            uint256 weightDDT = (balanceDDT * _weights[i]);
 
             console.log("weightPT: ", weightPT);
             console.log("weightDDT: ", weightDDT);
@@ -232,8 +231,8 @@ contract HybridVoting {
         }
 
         // Calculate the remaining tokens as the difference between the user's PT balance and total distributed PT
-        uint256 remainingPT = voteWeightPT*100 - totalDistributedPT;
-        uint256 remainingDDT = balanceDDT*100 - totalDistributedDDT;
+        uint256 remainingPT = voteWeightPT * 100 - totalDistributedPT;
+        uint256 remainingDDT = balanceDDT * 100 - totalDistributedDDT;
         console.log("remainingPT: ", remainingPT);
         console.log("remainingDDT: ", remainingDDT);
 
@@ -291,7 +290,7 @@ contract HybridVoting {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
 
-        //if no votes no winner 
+        //if no votes no winner
         if (proposal.totalVotesPT == 0 && proposal.totalVotesDDT == 0) {
             return (0, false);
         }
@@ -333,7 +332,7 @@ contract HybridVoting {
         }
 
         // Calculate the quorum threshold as a percentage of total weighted votes
-        uint256 quorumThreshold = (totalWeightedVotes * quorumPercentage)/100;
+        uint256 quorumThreshold = (totalWeightedVotes * quorumPercentage) / 100;
         console.log("quorumThreshold: ", quorumThreshold);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {

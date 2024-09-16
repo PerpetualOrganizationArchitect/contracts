@@ -92,14 +92,23 @@ contract ParticipationVotingTest is Test {
             "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+
+        uint256[] memory weightsVoter1 = new uint256[](2);
+        weightsVoter1[0] = 51;
+        weightsVoter1[1] = 49;
+
+        // Voter1 votes
         vm.prank(voter1);
-        participationVoting.vote(0, voter1, 0);
+        participationVoting.vote(0, voter1, optionIndices, weightsVoter1);
 
         (uint256 votes) = participationVoting.getOptionVotes(0, 0);
-        assertEq(votes, 100);
+        assertEq(votes, 5100);
 
         (uint256 totalVotes,,,,,,,) = participationVoting.getProposal(0);
-        assertEq(totalVotes, 100);
+        assertEq(totalVotes, 1);
     }
 
     function testAnnounceWinner() public {
@@ -117,7 +126,17 @@ contract ParticipationVotingTest is Test {
         );
 
         vm.prank(voter1);
-        participationVoting.vote(0, voter1, 0);
+
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+
+        uint256[] memory weightsVoter1 = new uint256[](2);
+        weightsVoter1[0] = 51;
+        weightsVoter1[1] = 49;
+
+        // Voter1 votes
+        participationVoting.vote(0, voter1, optionIndices, weightsVoter1);
 
         vm.warp(block.timestamp + 2 minutes);
 
@@ -136,16 +155,26 @@ contract ParticipationVotingTest is Test {
         );
 
         vm.prank(voter1);
-        participationVotingQuadratic.vote(0, voter1, 0);
+
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+
+        uint256[] memory weightsVoter1 = new uint256[](2);
+        weightsVoter1[0] = 100;
+        weightsVoter1[1] = 0;
+
+        // Voter1 votes
+        participationVotingQuadratic.vote(0, voter1, optionIndices, weightsVoter1);
 
         (uint256 votes) = participationVotingQuadratic.getOptionVotes(0, 0);
 
         // square root of 100 is 10
-        uint256 expectedQuadraticVotes = 10;
+        uint256 expectedQuadraticVotes = 1000;
         assertEq(votes, expectedQuadraticVotes);
 
         (uint256 totalVotes,,,,,,,) = participationVotingQuadratic.getProposal(0);
-        assertEq(totalVotes, expectedQuadraticVotes);
+        assertEq(totalVotes, 1);
     }
 }
 

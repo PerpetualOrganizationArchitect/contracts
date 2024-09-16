@@ -134,14 +134,14 @@ contract HybridVotingTest is Test {
         uint256 expectedPTVoter1 = 11;
         uint256 expectedPTVoter2 = 36;
 
-        console.log("Expected votes pt0: %d", (expectedPTVoter1 * 61 ) + (expectedPTVoter2 * 53));
-        console.log("Expected votes pt1 %d", (expectedPTVoter1 * 39 ) + (expectedPTVoter2 * 47));
+        console.log("Expected votes pt0: %d", (expectedPTVoter1 * 61) + (expectedPTVoter2 * 53));
+        console.log("Expected votes pt1 %d", (expectedPTVoter1 * 39) + (expectedPTVoter2 * 47));
 
-        assertEq(votesPT0, (expectedPTVoter1 * 61 ) + (expectedPTVoter2 * 53 ));
-        assertEq(votesPT1, (expectedPTVoter1 * 39) + (expectedPTVoter2 * 47 ));
+        assertEq(votesPT0, (expectedPTVoter1 * 61) + (expectedPTVoter2 * 53));
+        assertEq(votesPT1, (expectedPTVoter1 * 39) + (expectedPTVoter2 * 47));
 
-        assertEq(votesDDT0, (100 * 61 ) + (100 * 53 )); // Democracy tokens (no quadratic)
-        assertEq(votesDDT1, (100 * 39 ) + (100 * 47 )); // Democracy tokens (no quadratic)
+        assertEq(votesDDT0, (100 * 61) + (100 * 53)); // Democracy tokens (no quadratic)
+        assertEq(votesDDT1, (100 * 39) + (100 * 47)); // Democracy tokens (no quadratic)
     }
 
     function testAnnounceWinner() public {
@@ -234,8 +234,6 @@ contract HybridVotingTest is Test {
         assertEq(hasValidWinner, false);
     }
 
-
-
     function testLeftoverTokenDistributionWithQuadraticVoting() public {
         vm.prank(owner);
         hybridVotingQuadratic.createProposal(
@@ -262,7 +260,7 @@ contract HybridVotingTest is Test {
         (uint256 votesPT0, uint256 votesDDT0) = hybridVotingQuadratic.getProposalOptionVotes(0, 0);
         (uint256 votesPT1, uint256 votesDDT1) = hybridVotingQuadratic.getProposalOptionVotes(0, 1);
 
-        assertTrue(votesPT0 + votesPT1 <= sqrt(137)*100 + sqrt(1338)*100, "Leftover tokens handled correctly");
+        assertTrue(votesPT0 + votesPT1 <= sqrt(137) * 100 + sqrt(1338) * 100, "Leftover tokens handled correctly");
     }
 
     function sqrt(uint256 x) public pure returns (uint256) {
