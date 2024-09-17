@@ -61,9 +61,9 @@ contract HybridVoting {
     event Voted(
         uint256 indexed proposalId,
         address indexed voter,
-        uint256 optionIndex,
-        uint256 voteWeightPT,
-        uint256 voteWeightDDT
+        uint256[] optionIndices,
+        uint256[] weights,
+        uint256 voteWeightPT
     );
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
@@ -222,8 +222,6 @@ contract HybridVoting {
 
             proposal.totalVotesDDT += weightDDT;
             proposal.options[optionIndex].votesDDT += weightDDT;
-
-            emit Voted(_proposalId, _voter, optionIndex, weightPT, weightDDT);
         }
 
         // Calculate the remaining tokens as the difference between the user's PT balance and total distributed PT
@@ -237,6 +235,8 @@ contract HybridVoting {
             proposal.totalVotesPT += remainingPT;
             proposal.totalVotesDDT += remainingDDT;
         }
+
+        emit Voted(_proposalId, _voter, _optionIndices, _weights, voteWeightPT);
     }
 
     function calculateQuadraticVoteWeight(uint256 _balance) public pure returns (uint256) {

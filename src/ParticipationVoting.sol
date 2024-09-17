@@ -49,7 +49,13 @@ contract ParticipationVoting {
         bool transferEnabled,
         address transferToken
     );
-    event Voted(uint256 indexed proposalId, address indexed voter, uint256[] optionIndices, uint256[] weights);
+    event Voted(
+        uint256 indexed proposalId,
+        address indexed voter,
+        uint256[] optionIndices,
+        uint256[] weights,
+        uint256 totalVoteWeight
+    );
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
 
@@ -172,7 +178,7 @@ contract ParticipationVoting {
             proposal.options[optionIndex].votes += (voteWeight * _weights[i]);
         }
 
-        emit Voted(_proposalId, _voter, _optionIndices, _weights);
+        emit Voted(_proposalId, _voter, _optionIndices, _weights, voteWeight);
     }
 
     function calculateQuadraticVoteWeight(uint256 _balance) internal pure returns (uint256) {
