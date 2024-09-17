@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "forge-std/console.sol";
 
 //importnaant vote weights arent percerntages but integers
 
@@ -208,9 +207,6 @@ contract HybridVoting {
             uint256 weightPT = (voteWeightPT * _weights[i]);
             uint256 weightDDT = (balanceDDT * _weights[i]);
 
-            console.log("weightPT: ", weightPT);
-            console.log("weightDDT: ", weightDDT);
-
             // Track the option with the highest weight to handle rounding adjustments later
             if (_weights[i] > maxWeight) {
                 maxWeight = _weights[i];
@@ -233,8 +229,6 @@ contract HybridVoting {
         // Calculate the remaining tokens as the difference between the user's PT balance and total distributed PT
         uint256 remainingPT = voteWeightPT * 100 - totalDistributedPT;
         uint256 remainingDDT = balanceDDT * 100 - totalDistributedDDT;
-        console.log("remainingPT: ", remainingPT);
-        console.log("remainingDDT: ", remainingDDT);
 
         // Assign leftover tokens to the option the user weighted the most
         if (remainingPT > 0 || remainingDDT > 0) {
@@ -302,9 +296,6 @@ contract HybridVoting {
         uint256 totalVotesPT = proposal.totalVotesPT;
         uint256 totalVotesDDT = proposal.totalVotesDDT;
 
-        console.log("totalVotesPT: ", totalVotesPT);
-        console.log("totalVotesDDT: ", totalVotesDDT);
-
         uint256 scalingFactor = 1e4;
 
         uint256 totalWeightedVotes = 0;
@@ -314,26 +305,19 @@ contract HybridVoting {
             uint256 votesPT = proposal.options[i].votesPT;
             uint256 votesDDT = proposal.options[i].votesDDT;
 
-            console.log("votesPT: ", votesPT);
-            console.log("votesDDT: ", votesDDT);
-
             // Properly calculate the weighted votes for each option checking for 0
             uint256 weightedVotesPT =
                 totalVotesPT > 0 ? (votesPT * participationVoteWeight * scalingFactor) / totalVotesPT : 0;
             uint256 weightedVotesDDT =
                 totalVotesDDT > 0 ? (votesDDT * democracyVoteWeight * scalingFactor) / totalVotesDDT : 0;
 
-            console.log("weightedVotesPT: ", weightedVotesPT);
-            console.log("weightedVotesDDT: ", weightedVotesDDT);
             uint256 totalVotesWeighted = weightedVotesPT + weightedVotesDDT;
-            console.log("totalVotesWeighted: ", totalVotesWeighted);
             optionWeights[i] = totalVotesWeighted;
             totalWeightedVotes += totalVotesWeighted;
         }
 
         // Calculate the quorum threshold as a percentage of total weighted votes
         uint256 quorumThreshold = (totalWeightedVotes * quorumPercentage) / 100;
-        console.log("quorumThreshold: ", quorumThreshold);
 
         for (uint256 i = 0; i < proposal.options.length; i++) {
             uint256 totalVotesWeighted = optionWeights[i];

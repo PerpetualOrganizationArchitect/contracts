@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "forge-std/console.sol";
 
 interface INFTMembership2 {
     function checkMemberTypeByAddress(address user) external view returns (string memory);
@@ -253,8 +252,6 @@ contract DirectDemocracyVoting {
             if (proposal.options[i].votes > highestVotes) {
                 highestVotes = proposal.options[i].votes;
                 winningOptionIndex = i;
-                console.log("highestVotes: %d", highestVotes);
-                console.log("quorumThreshold: %d", quorumThreshold);
                 hasValidWinner = highestVotes >= quorumThreshold;
             }
         }
