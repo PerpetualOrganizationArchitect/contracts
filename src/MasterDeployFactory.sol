@@ -223,6 +223,7 @@ contract MasterFactory {
             "DirectDemocracyToken", "DDT", nftAddress, executivePermissionNames, POname
         );
     }
+    // chnage this so can pass in name and symbol
 
     function deployParticipationToken(string memory POname, address nftAddress) internal returns (address) {
         return participationTokenFactory.createParticipationToken("ParticipationToken", "PT", POname, nftAddress);
