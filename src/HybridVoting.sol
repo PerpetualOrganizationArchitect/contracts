@@ -61,9 +61,9 @@ contract HybridVoting {
     event Voted(
         uint256 indexed proposalId,
         address indexed voter,
-        uint256 optionIndex,
-        uint256 voteWeightPT,
-        uint256 voteWeightDDT
+        uint256[] optionIndices,
+        uint256[] weights,
+        uint256 voteWeightPT
     );
     event PollOptionNames(uint256 indexed proposalId, uint256 indexed optionIndex, string name);
     event WinnerAnnounced(uint256 indexed proposalId, uint256 winningOptionIndex, bool hasValidWinner);
@@ -166,24 +166,77 @@ contract HybridVoting {
         }
     }
 
-    function vote(uint256 _proposalId, address _voter, uint256 _optionIndex) external whenNotExpired(_proposalId) {
+    // doesnt divide by 100 after voting weights are calculated to avoid rounding errors
+    function vote(uint256 _proposalId, address _voter, uint256[] memory _optionIndices, uint256[] memory _weights)
+        external
+        whenNotExpired(_proposalId)
+    {
         uint256 balanceDDT = DirectDemocracyToken.balanceOf(_voter);
         require(balanceDDT > 0, "No democracy tokens");
         uint256 balancePT = ParticipationToken.balanceOf(_voter);
-
         require(_proposalId < proposals.length, "Invalid proposal ID");
+        require(_optionIndices.length == _weights.length, "Option indices and weights length mismatch");
+
+        // Sum of weights must be 100 (for percentage-based voting)
+        uint256 totalWeight = 0;
+        for (uint256 i = 0; i < _weights.length; i++) {
+            totalWeight += _weights[i];
+        }
+        require(totalWeight == 100, "Total weight must be 100");
+
         Proposal storage proposal = proposals[_proposalId];
         require(!proposal.hasVoted[_voter], "Already voted");
+        require(_optionIndices.length == proposal.options.length, "Invalid option indices length");
 
+        // Apply quadratic voting if enabled
         uint256 voteWeightPT = quadraticVotingEnabled ? calculateQuadraticVoteWeight(balancePT) : balancePT;
 
         proposal.hasVoted[_voter] = true;
-        proposal.totalVotesPT += voteWeightPT;
-        proposal.options[_optionIndex].votesPT += voteWeightPT;
-        proposal.totalVotesDDT += balanceDDT;
-        proposal.options[_optionIndex].votesDDT += balanceDDT;
 
-        emit Voted(_proposalId, _voter, _optionIndex, voteWeightPT, balanceDDT);
+        uint256 totalDistributedPT = 0;
+        uint256 totalDistributedDDT = 0;
+        uint256 maxWeight = 0;
+        uint256 maxWeightIndex = 0;
+
+        // First, distribute the tokens to the options based on weights
+        for (uint256 i = 0; i < _optionIndices.length; i++) {
+            uint256 optionIndex = _optionIndices[i];
+            require(optionIndex < proposal.options.length, "Invalid option index");
+
+            // Calculate the votes for each option based on the weight percentage
+            uint256 weightPT = (voteWeightPT * _weights[i]);
+            uint256 weightDDT = (balanceDDT * _weights[i]);
+
+            // Track the option with the highest weight to handle rounding adjustments later
+            if (_weights[i] > maxWeight) {
+                maxWeight = _weights[i];
+                maxWeightIndex = optionIndex;
+            }
+
+            totalDistributedPT += weightPT;
+            totalDistributedDDT += weightDDT;
+
+            // Update proposal votes
+            proposal.totalVotesPT += weightPT;
+            proposal.options[optionIndex].votesPT += weightPT;
+
+            proposal.totalVotesDDT += weightDDT;
+            proposal.options[optionIndex].votesDDT += weightDDT;
+        }
+
+        // Calculate the remaining tokens as the difference between the user's PT balance and total distributed PT
+        uint256 remainingPT = voteWeightPT * 100 - totalDistributedPT;
+        uint256 remainingDDT = balanceDDT * 100 - totalDistributedDDT;
+
+        // Assign leftover tokens to the option the user weighted the most
+        if (remainingPT > 0 || remainingDDT > 0) {
+            proposal.options[maxWeightIndex].votesPT += remainingPT;
+            proposal.options[maxWeightIndex].votesDDT += remainingDDT;
+            proposal.totalVotesPT += remainingPT;
+            proposal.totalVotesDDT += remainingDDT;
+        }
+
+        emit Voted(_proposalId, _voter, _optionIndices, _weights, voteWeightPT);
     }
 
     function calculateQuadraticVoteWeight(uint256 _balance) public pure returns (uint256) {
@@ -231,6 +284,11 @@ contract HybridVoting {
         require(_proposalId < proposals.length, "Invalid proposal ID");
         Proposal storage proposal = proposals[_proposalId];
 
+        //if no votes no winner
+        if (proposal.totalVotesPT == 0 && proposal.totalVotesDDT == 0) {
+            return (0, false);
+        }
+
         uint256 winningVotes = 0;
         uint256 winningOptionIndex = 0;
         bool hasValidWinner = false;
@@ -238,7 +296,7 @@ contract HybridVoting {
         uint256 totalVotesPT = proposal.totalVotesPT;
         uint256 totalVotesDDT = proposal.totalVotesDDT;
 
-        uint256 scalingFactor = 1e9;
+        uint256 scalingFactor = 1e4;
 
         uint256 totalWeightedVotes = 0;
         uint256[] memory optionWeights = new uint256[](proposal.options.length);

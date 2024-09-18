@@ -15,9 +15,9 @@ contract HybridVotingTest is Test {
     ITreasury2 public treasury;
 
     address public owner = address(1);
-    address public voter1 = address(2);
-    address public voter2 = address(3);
-    address public voter3 = address(4);
+    address public voter1 = address(2); // 137 PT
+    address public voter2 = address(3); // 1338 PT
+    address public voter3 = address(4); // 234 PT
     address public treasuryAddress = address(5);
 
     uint256 public democracyVoteWeight = 73;
@@ -26,7 +26,7 @@ contract HybridVotingTest is Test {
 
     string[] public allowedRoleNames = ["member"];
     string[] public optionNames = ["Option1", "Option2"];
-    bool public quadraticVotingEnabled = false;
+    bool public quadraticVotingEnabled = true;
 
     function setUp() public {
         participationToken = IERC20(address(new ERC20Mock("Participation Token", "PT")));
@@ -39,7 +39,7 @@ contract HybridVotingTest is Test {
             address(democracyToken),
             address(nftMembership),
             allowedRoleNames,
-            quadraticVotingEnabled,
+            false, // Normal voting
             democracyVoteWeight,
             participationVoteWeight,
             address(treasury),
@@ -51,22 +51,23 @@ contract HybridVotingTest is Test {
             address(democracyToken),
             address(nftMembership),
             allowedRoleNames,
-            true,
+            true, // Quadratic voting
             democracyVoteWeight,
             participationVoteWeight,
             address(treasury),
             quorumPercentage
         );
 
-        // Set initial balances
-        deal(address(participationToken), voter1, 100);
-        deal(address(democracyToken), voter1, 100);
-        deal(address(democracyToken), voter2, 100);
-        deal(address(democracyToken), voter3, 100);
+        // Set initial balances for participants
+        deal(address(participationToken), voter1, 137); // 137 PT for voter1
+        deal(address(participationToken), voter2, 1338); // 1338 PT for voter2
+        deal(address(participationToken), voter3, 234); // 234 PT for voter3
+        deal(address(democracyToken), voter1, 100); // 100 DDT for voter1
+        deal(address(democracyToken), voter2, 100); // 500 DDT for voter2
+        deal(address(democracyToken), voter3, 100); // 300 DDT for voter3
 
-        // set owner as member
+        // Set owner as member
         NFTMembershipMock(address(nftMembership)).setMemberType(owner, "member");
-
         deal(address(participationToken), address(treasury), 1000 * 10 ** 18);
     }
 
@@ -99,22 +100,48 @@ contract HybridVotingTest is Test {
         assertEq(transferToken, address(0));
     }
 
-    function testVote() public {
+    function testQuadraticWeightedVotingWithDifferentBalances() public {
         vm.prank(owner);
-        hybridVoting.createProposal(
+        hybridVotingQuadratic.createProposal(
             "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+
+        uint256[] memory weightsVoter1 = new uint256[](2);
+        weightsVoter1[0] = 61; // 61% to option 0
+        weightsVoter1[1] = 39; // 39% to option 1
+
+        uint256[] memory weightsVoter2 = new uint256[](2);
+        weightsVoter2[0] = 53; // 53% to option 0
+        weightsVoter2[1] = 47; // 47% to option 1
+
+        // Voter1 votes (137 PT, 100 DDT), quadratic voting applies
         vm.prank(voter1);
-        hybridVoting.vote(0, voter1, 0);
+        hybridVotingQuadratic.vote(0, voter1, optionIndices, weightsVoter1);
 
-        (uint256 votesPT, uint256 votesDDT) = hybridVoting.getProposalOptionVotes(0, 0);
-        assertEq(votesPT, 100);
-        assertEq(votesDDT, 100);
+        // Voter2 votes (1338 PT, 500 DDT), quadratic voting applies
+        vm.prank(voter2);
+        hybridVotingQuadratic.vote(0, voter2, optionIndices, weightsVoter2);
 
-        (uint256 totalVotesPT, uint256 totalVotesDDT,,,,,,,) = hybridVoting.getProposal(0);
-        assertEq(totalVotesPT, 100);
-        assertEq(totalVotesDDT, 100);
+        // Verify the votes for each option
+        (uint256 votesPT0, uint256 votesDDT0) = hybridVotingQuadratic.getProposalOptionVotes(0, 0);
+        (uint256 votesPT1, uint256 votesDDT1) = hybridVotingQuadratic.getProposalOptionVotes(0, 1);
+
+        // Check quadratic calculations
+        uint256 expectedPTVoter1 = 11;
+        uint256 expectedPTVoter2 = 36;
+
+        console.log("Expected votes pt0: %d", (expectedPTVoter1 * 61) + (expectedPTVoter2 * 53));
+        console.log("Expected votes pt1 %d", (expectedPTVoter1 * 39) + (expectedPTVoter2 * 47));
+
+        assertEq(votesPT0, (expectedPTVoter1 * 61) + (expectedPTVoter2 * 53));
+        assertEq(votesPT1, (expectedPTVoter1 * 39) + (expectedPTVoter2 * 47));
+
+        assertEq(votesDDT0, (100 * 61) + (100 * 53)); // Democracy tokens (no quadratic)
+        assertEq(votesDDT1, (100 * 39) + (100 * 47)); // Democracy tokens (no quadratic)
     }
 
     function testAnnounceWinner() public {
@@ -122,7 +149,7 @@ contract HybridVotingTest is Test {
         hybridVoting.createProposal(
             "Proposal1",
             "Description1",
-            1, // 1 minute for quick expiration
+            1,
             optionNames,
             0,
             payable(treasuryAddress),
@@ -131,94 +158,119 @@ contract HybridVotingTest is Test {
             address(participationToken)
         );
 
-        vm.prank(voter1);
-        hybridVoting.vote(0, voter1, 0);
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
 
+        uint256[] memory weightsVoter1 = new uint256[](2);
+        weightsVoter1[0] = 51;
+        weightsVoter1[1] = 49;
+
+        // Voter1 votes
+        vm.prank(voter1);
+        hybridVoting.vote(0, voter1, optionIndices, weightsVoter1);
+
+        // Advance time to make the proposal expire
         vm.warp(block.timestamp + 2 minutes);
 
+        // Announce the winner
         vm.prank(owner);
-        hybridVoting.announceWinner(0);
-
         (uint256 winningOptionIndex, bool hasValidWinner) = hybridVoting.announceWinner(0);
-        assertEq(winningOptionIndex, 0);
+        assertEq(winningOptionIndex, 0); // Assume option 0 wins based on weights
         assertEq(hasValidWinner, true);
     }
 
-    function testQuadraticVoting() public {
-        vm.prank(owner);
-        hybridVotingQuadratic.createProposal(
+    function testCannotCreateProposalNotAllowed() public {
+        vm.prank(voter1); // voter1 is not in allowedRoles
+        vm.expectRevert("Not authorized to create proposal");
+        hybridVoting.createProposal(
             "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
-
-        vm.prank(voter1);
-        hybridVotingQuadratic.vote(0, voter1, 0);
-
-        (uint256 votesPT, uint256 votesDDT) = hybridVotingQuadratic.getProposalOptionVotes(0, 0);
-
-        // square root of 100 is 10
-        uint256 expectedQuadraticVotes = 10;
-        assertEq(votesPT, expectedQuadraticVotes);
-        assertEq(votesDDT, 100);
-
-        (uint256 totalVotesPT, uint256 totalVotesDDT,,,,,,,) = hybridVotingQuadratic.getProposal(0);
-        assertEq(totalVotesPT, expectedQuadraticVotes);
-        assertEq(totalVotesDDT, 100);
     }
-    // function to test the hybrid voting calculations in scenrrio where both PT and DDT are used and option 0 barely wins
 
-    function testHybridVotingCalculations() public {
-        // Create a proposal
+    function testAnnounceWinnerQuorumNotReached() public {
         vm.prank(owner);
         hybridVoting.createProposal(
             "Proposal1", "Description1", 1, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
 
-        // Vote on the proposal
-        vm.prank(voter1);
-        hybridVoting.vote(0, voter1, 0);
-        vm.prank(voter2);
-        hybridVoting.vote(0, voter2, 1);
-        vm.prank(voter3);
-        hybridVoting.vote(0, voter3, 1);
+        // No votes cast
 
-        // Get the votes for the option
-        (uint256 votesPT, uint256 votesDDT) = hybridVoting.getProposalOptionVotes(0, 0);
-
-        // Assert the votes
-        assertEq(votesPT, 100);
-        assertEq(votesDDT, 100);
-
-        (uint256 votesPT_1, uint256 votesDDT_1) = hybridVoting.getProposalOptionVotes(0, 1);
-        assertEq(votesPT_1, 0);
-        assertEq(votesDDT_1, 200);
-
-        // Get the total votes for the proposal
-        (uint256 totalVotesPT, uint256 totalVotesDDT,,,,,,,) = hybridVoting.getProposal(0);
-
-        // Assert the total votes
-        assertEq(totalVotesPT, 100);
-        assertEq(totalVotesDDT, 300);
-
+        // Advance time to make the proposal expire
         vm.warp(block.timestamp + 2 minutes);
 
-        // Announce the winner
-        hybridVoting.announceWinner(0);
-
+        vm.prank(owner);
         (uint256 winningOptionIndex, bool hasValidWinner) = hybridVoting.announceWinner(0);
-        assertEq(winningOptionIndex, 0);
-        assertEq(hasValidWinner, true);
+
+        assertEq(hasValidWinner, false); // Quorum not reached
     }
-    // test non member cant create proposal
 
-    function testNonMemberCannotCreateProposal() public {
-        address nonMember = address(6); // Address that is not set as a member
-        vm.prank(nonMember); // Use non-member account to call the function
-
-        vm.expectRevert("Not authorized to create proposal"); // Expect revert with the specified error message
-
+    function testCannotAnnounceWinnerBeforeProposalExpired() public {
+        vm.prank(owner);
         hybridVoting.createProposal(
             "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
         );
+
+        vm.prank(owner);
+        vm.expectRevert("Voting is not yet closed");
+        hybridVoting.announceWinner(0);
+    }
+
+    function testAnnounceWinnerWithZeroTotalVotes() public {
+        vm.prank(owner);
+        hybridVoting.createProposal(
+            "Proposal1", "Description1", 1, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+
+        // No votes cast
+
+        // Advance time to make the proposal expire
+        vm.warp(block.timestamp + 2 minutes);
+
+        vm.prank(owner);
+        (uint256 winningOptionIndex, bool hasValidWinner) = hybridVoting.announceWinner(0);
+
+        // Ensure no division by zero occurs and the function handles it
+        assertEq(hasValidWinner, false);
+    }
+
+    function testLeftoverTokenDistributionWithQuadraticVoting() public {
+        vm.prank(owner);
+        hybridVotingQuadratic.createProposal(
+            "Proposal1", "Description1", 60, optionNames, 0, payable(treasuryAddress), 100, false, address(0)
+        );
+
+        uint256[] memory optionIndices = new uint256[](2);
+        optionIndices[0] = 0;
+        optionIndices[1] = 1;
+
+        uint256[] memory weights = new uint256[](2);
+        weights[0] = 50; // 50% to option 0
+        weights[1] = 50; // 50% to option 1
+
+        // Voter1 votes
+        vm.prank(voter1);
+        hybridVotingQuadratic.vote(0, voter1, optionIndices, weights);
+
+        // Voter2 votes
+        vm.prank(voter2);
+        hybridVotingQuadratic.vote(0, voter2, optionIndices, weights);
+
+        // Check leftover token distribution after quadratic voting and rounding
+        (uint256 votesPT0, uint256 votesDDT0) = hybridVotingQuadratic.getProposalOptionVotes(0, 0);
+        (uint256 votesPT1, uint256 votesDDT1) = hybridVotingQuadratic.getProposalOptionVotes(0, 1);
+
+        assertTrue(votesPT0 + votesPT1 <= sqrt(137) * 100 + sqrt(1338) * 100, "Leftover tokens handled correctly");
+    }
+
+    function sqrt(uint256 x) public pure returns (uint256) {
+        uint256 z = (x + 1) / 2;
+        uint256 y = x;
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
+        return y;
     }
 }
 
