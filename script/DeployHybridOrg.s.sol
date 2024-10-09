@@ -49,18 +49,19 @@ contract DeployHybridOrg {
         params.contractNames[4] = "DirectDemocracyVoting";
         params.contractNames[5] = "HybridVoting";
         params.contractNames[6] = "TaskManager";
-        params.contractNames[7] = "QuickJoin";
 
         // Add ElectionContract if electionEnabled is true
-        uint256 nextIndex = 8;
+        uint256 nextIndex = 7;
         if (electionEnabled) {
             params.contractNames[nextIndex++] = "ElectionContract";
         }
 
         // Add EducationHub if educationHubEnabled is true
         if (educationHubEnabled) {
-            params.contractNames[nextIndex] = "EducationHub";
+            params.contractNames[nextIndex++] = "EducationHub";
         }
+
+        params.contractNames[nextIndex] = "QuickJoin";
 
         MasterFactory masterFactory = MasterFactory(_masterFactory);
         address registryAddress = masterFactory.deployAll(params);

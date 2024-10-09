@@ -68,12 +68,38 @@ contract TestAllOrgTypes is Test {
         checkContractAddresses(directDemocracyRegistryAddress, "DirectDemocracyWithElection");
     }
 
+    function testDeployDirectDemocracyWithEducation() public {
+        DeployDirectDemocracyOrg deployDirectDemocracyOrg = new DeployDirectDemocracyOrg();
+
+        directDemocracyRegistryAddress = deployDirectDemocracyOrg.run(address(masterFactory), false, true);
+
+        checkContractAddresses(directDemocracyRegistryAddress, "DirectDemocracyWithEducation");
+    }
+
     function testDeployHybridVotingWithEducationHub() public {
         DeployHybridOrg deployHybridOrg = new DeployHybridOrg();
 
         hybridVotingRegistryAddress = deployHybridOrg.run(address(masterFactory), false, true);
 
         checkContractAddresses(hybridVotingRegistryAddress, "HybridVotingWithEducationHub");
+    }
+
+    function testDeployHybridVotingWithElectionHub() public {
+        DeployHybridOrg deployHybridOrg = new DeployHybridOrg();
+        hybridVotingRegistryAddress = deployHybridOrg.run(address(masterFactory), true, false);
+        checkContractAddresses(hybridVotingRegistryAddress, "HybridVotingWithElectionHub");
+    }
+
+    function testDeployParticipationVotingWithElection() public {
+        DeployParticipationOrg deployParticipationOrg = new DeployParticipationOrg();
+        participationVotingRegistryAddress = deployParticipationOrg.run(address(masterFactory), true, false);
+        checkContractAddresses(participationVotingRegistryAddress, "ParticipationVotingWithElection");
+    }
+
+    function testDeployParticipationVotingWithEducation() public {
+        DeployParticipationOrg deployParticipationOrg = new DeployParticipationOrg();
+        participationVotingRegistryAddress = deployParticipationOrg.run(address(masterFactory), false, true);
+        checkContractAddresses(participationVotingRegistryAddress, "ParticipationVotingWithEducation");
     }
 
     function checkContractAddresses(address registryAddress, string memory deploymentType) internal view {
@@ -126,6 +152,19 @@ contract TestAllOrgTypes is Test {
             assertTrue(electionContract == address(0), "ElectionContract should not be deployed");
             assertTrue(educationHub == address(0), "EducationHub should not be deployed");
         } else if (
+            keccak256(abi.encodePacked(deploymentType)) == keccak256(abi.encodePacked("HybridVotingWithElectionHub"))
+        ) {
+            assertTrue(nftMembership != address(0), "NFTMembership address is invalid");
+            assertTrue(directDemocracyToken != address(0), "DirectDemocracyToken address is invalid");
+            assertTrue(participationToken != address(0), "ParticipationToken address is invalid");
+            assertTrue(treasury != address(0), "Treasury address is invalid");
+            assertTrue(hybridVotingAddress != address(0), "HybridVoting address is invalid");
+            assertTrue(taskManager != address(0), "TaskManager address is invalid");
+            assertTrue(quickJoin != address(0), "QuickJoin address is invalid");
+            assertTrue(directDemocracyVoting != address(0), "DirectDemocracyVoting address is invalid");
+            assertTrue(electionContract != address(0), "ElectionHub address is invalid");
+            assertTrue(educationHub == address(0), "EducationContract should not be deployed");
+        } else if (
             keccak256(abi.encodePacked(deploymentType)) == keccak256(abi.encodePacked("DirectDemocracyWithElection"))
         ) {
             assertTrue(nftMembership != address(0), "NFTMembership address is invalid");
@@ -137,6 +176,18 @@ contract TestAllOrgTypes is Test {
             assertTrue(participationToken != address(0), "ParticipationToken address is invalid");
             assertTrue(electionContract != address(0), "ElectionContract address is invalid");
             assertTrue(educationHub == address(0), "EducationHub should not be deployed");
+        } else if (
+            keccak256(abi.encodePacked(deploymentType)) == keccak256(abi.encodePacked("DirectDemocracyWithEducation"))
+        ) {
+            assertTrue(nftMembership != address(0), "NFTMembership address is invalid");
+            assertTrue(directDemocracyToken != address(0), "DirectDemocracyToken address is invalid");
+            assertTrue(treasury != address(0), "Treasury address is invalid");
+            assertTrue(directDemocracyVoting != address(0), "DirectDemocracyVoting address is invalid");
+            assertTrue(taskManager != address(0), "TaskManager address is invalid");
+            assertTrue(quickJoin != address(0), "QuickJoin address is invalid");
+            assertTrue(participationToken != address(0), "ParticipationToken address is invalid");
+            assertTrue(electionContract == address(0), "ElectionContract should not be deployed");
+            assertTrue(educationHub != address(0), "EducationHub address is invalid");
         } else if (
             keccak256(abi.encodePacked(deploymentType)) == keccak256(abi.encodePacked("HybridVotingWithEducationHub"))
         ) {
@@ -150,6 +201,32 @@ contract TestAllOrgTypes is Test {
             assertTrue(directDemocracyVoting != address(0), "DirectDemocracyVoting address is invalid");
             assertTrue(electionContract == address(0), "ElectionContract should not be deployed");
             assertTrue(educationHub != address(0), "EducationHub address is invalid");
+        } else if (
+            keccak256(abi.encodePacked(deploymentType))
+                == keccak256(abi.encodePacked("ParticipationVotingWithEducation"))
+        ) {
+            assertTrue(nftMembership != address(0), "NFTMembership address is invalid");
+            assertTrue(participationToken != address(0), "ParticipationToken address is invalid");
+            assertTrue(treasury != address(0), "Treasury address is invalid");
+            assertTrue(participationVoting != address(0), "ParticipationVoting address is invalid");
+            assertTrue(taskManager != address(0), "TaskManager address is invalid");
+            assertTrue(quickJoin != address(0), "QuickJoin address is invalid");
+            assertTrue(directDemocracyVoting != address(0), "DirectDemocracyVoting address is invalid");
+            assertTrue(electionContract == address(0), "ElectionContract should not be deployed");
+            assertTrue(educationHub != address(0), "EducationHub address is invalid");
+        } else if (
+            keccak256(abi.encodePacked(deploymentType))
+                == keccak256(abi.encodePacked("ParticipationVotingWithElection"))
+        ) {
+            assertTrue(nftMembership != address(0), "NFTMembership address is invalid");
+            assertTrue(participationToken != address(0), "ParticipationToken address is invalid");
+            assertTrue(treasury != address(0), "Treasury address is invalid");
+            assertTrue(participationVoting != address(0), "ParticipationVoting address is invalid");
+            assertTrue(taskManager != address(0), "TaskManager address is invalid");
+            assertTrue(quickJoin != address(0), "QuickJoin address is invalid");
+            assertTrue(directDemocracyVoting != address(0), "DirectDemocracyVoting address is invalid");
+            assertTrue(electionContract != address(0), "ElectionContract address is invalid");
+            assertTrue(educationHub == address(0), "EducationHub should not be deployed");
         } else {
             revert("Invalid deployment type");
         }
