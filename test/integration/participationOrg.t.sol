@@ -37,23 +37,38 @@ contract MockParticipationToken2 is IParticipationToken2 {
         return 0;
     }
 
-    function balanceOf(address account) external view override returns (uint256) {
+    function balanceOf(
+        address account
+    ) external view override returns (uint256) {
         return balances[account];
     }
 
-    function transfer(address recipient, uint256 amount) external override returns (bool) {
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) external override returns (bool) {
         return false;
     }
 
-    function allowance(address owner, address spender) external view override returns (uint256) {
+    function allowance(
+        address owner,
+        address spender
+    ) external view override returns (uint256) {
         return 0;
     }
 
-    function approve(address spender, uint256 amount) external override returns (bool) {
+    function approve(
+        address spender,
+        uint256 amount
+    ) external override returns (bool) {
         return false;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external override returns (bool) {
         return false;
     }
 }
@@ -62,11 +77,15 @@ contract MockNFTMembership11 is INFTMembership11 {
     mapping(address => string) public memberTypes;
     mapping(address => bool) public executives;
 
-    function checkMemberTypeByAddress(address user) external view override returns (string memory) {
+    function checkMemberTypeByAddress(
+        address user
+    ) external view override returns (string memory) {
         return memberTypes[user];
     }
 
-    function checkIsExecutive(address user) external view override returns (bool) {
+    function checkIsExecutive(
+        address user
+    ) external view override returns (bool) {
         return executives[user];
     }
 
@@ -77,6 +96,33 @@ contract MockNFTMembership11 is INFTMembership11 {
     function setExecutive(address user, bool isExec) external {
         executives[user] = isExec;
     }
+}
+
+interface IElectionContract {
+    struct Candidate {
+        address candidateAddress;
+        string candidateName;
+    }
+
+    function votingContract() external view returns (address);
+    function createElection(
+        uint256 _proposalId
+    ) external returns (uint256, uint256);
+    function addCandidate(
+        uint256 proposalId,
+        address _candidateAddress,
+        string memory _candidateName
+    ) external;
+    function getElectionDetails(
+        uint256 electionId
+    ) external view returns (bool, uint256, bool);
+    function getCandidates(
+        uint256 electionId
+    ) external view returns (Candidate[] memory);
+    function concludeElection(
+        uint256 proposalId,
+        uint256 winningOption
+    ) external;
 }
 
 contract ParticipationOrgTest is Test {
@@ -100,70 +146,98 @@ contract ParticipationOrgTest is Test {
     function testParticipationElectionHub() public {
         //Deploy ParticipationOrg with Election Hub
         DeployParticipationOrg deployParticipationOrg = new DeployParticipationOrg();
-        participationVotingRegistryAddress = deployParticipationOrg.run(address(masterFactory), false, false);
+        participationVotingRegistryAddress = deployParticipationOrg.run(
+            address(masterFactory),
+            true,
+            false
+        );
+        Registry registry = Registry(participationVotingRegistryAddress);
+        address electionContractAddress = registry.getContractAddress(
+            "ElectionContract"
+        );
 
-        ElectionContract electionContract;
-        NFTMembership nftMembership;
-        address votingContractAddress = participationVotingRegistryAddress;
-        address candidate1 = address(0xDEAD);
-        address candidate2 = address(0xBEEF);
-        address candidate3 = address(0xFEED);
-
-        string[] memory memberTypeNames = new string[](2);
-        memberTypeNames[0] = "Basic";
-        memberTypeNames[1] = "Executive";
-
-        string[] memory executiveRoleNames = new string[](1);
-        executiveRoleNames[0] = "Executive";
-        nftMembership = new NFTMembership(memberTypeNames, executiveRoleNames, "defaultImageURL");
-
-        electionContract = new ElectionContract(address(nftMembership), votingContractAddress);
-        nftMembership.setElectionContract(address(electionContract));
+        address votingContractAddress = IElectionContract(
+            electionContractAddress
+        ).votingContract();
+        address nftMembership = registry.getContractAddress("NFTMembership");
 
         //Election Creation
         vm.prank(votingContractAddress);
-        (uint256 electionId, uint256 proposalId) = electionContract.createElection(1);
+        (uint256 electionId, uint256 proposalId) = IElectionContract(
+            electionContractAddress
+        ).createElection(1);
 
         assertEq(electionId, 0);
         assertEq(proposalId, 1);
 
+        address candidate1 = address(0xDEAD);
+        address candidate2 = address(0xBEEF);
+        address candidate3 = address(0xFEED);
         // Add Candidates
         vm.prank(votingContractAddress);
-        electionContract.addCandidate(1, candidate1, "Candidate 1");
+        IElectionContract(electionContractAddress).addCandidate(
+            1,
+            candidate1,
+            "Candidate 1"
+        );
 
         vm.prank(votingContractAddress);
-        electionContract.addCandidate(1, candidate2, "Candidate 2");
+        IElectionContract(electionContractAddress).addCandidate(
+            1,
+            candidate2,
+            "Candidate 2"
+        );
 
         vm.prank(votingContractAddress);
-        electionContract.addCandidate(1, candidate3, "Candidate 3");
+        IElectionContract(electionContractAddress).addCandidate(
+            1,
+            candidate3,
+            "Candidate 3"
+        );
 
         // Conclude Election
         vm.prank(votingContractAddress);
-        electionContract.concludeElection(1, 2);
+        IElectionContract(electionContractAddress).concludeElection(1, 2);
 
         // Verify Results
-        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) =
-            electionContract.getElectionDetails(electionId);
+        (
+            bool isActive,
+            uint256 winningCandidateIndex,
+            bool hasValidWinner
+        ) = IElectionContract(electionContractAddress).getElectionDetails(
+                electionId
+            );
         assertFalse(isActive);
         assertTrue(hasValidWinner);
         assertEq(winningCandidateIndex, 2);
 
         // Verify Candidates
-        ElectionContract.Candidate[] memory candidates = electionContract.getCandidates(electionId);
+        IElectionContract.Candidate[] memory candidates = IElectionContract(
+            electionContractAddress
+        ).getCandidates(electionId);
         assertEq(candidates.length, 3);
         assertEq(candidates[0].candidateAddress, candidate1);
         assertEq(candidates[1].candidateAddress, candidate2);
         assertEq(candidates[2].candidateAddress, candidate3);
 
         // Check that the NFT was minted for the winning candidate
-        assertEq(nftMembership.checkMemberTypeByAddress(candidate3), "Executive");
+        assertEq(
+            INFTMembership11(nftMembership).checkMemberTypeByAddress(
+                candidate3
+            ),
+            "Executive"
+        );
     }
 
     /// @dev test with Eduction Hub
     function testParticipationEducationHub() public {
         //Deploy ParticipationOrg with Education Hub
         DeployParticipationOrg deployParticipationOrg = new DeployParticipationOrg();
-        participationVotingRegistryAddress = deployParticipationOrg.run(address(masterFactory), false, true);
+        participationVotingRegistryAddress = deployParticipationOrg.run(
+            address(masterFactory),
+            false,
+            true
+        );
 
         EducationHub educationHub;
         MockParticipationToken2 token;
@@ -188,8 +262,14 @@ contract ParticipationOrgTest is Test {
         vm.prank(executive);
         educationHub.createModule("Intro to DAO", "ipfsHash1", 100, 1);
 
-        (uint256 id, string memory name, string memory ipfsHash, bool exists, uint256 payout, uint8 correctAnswer) =
-            educationHub.modules(0);
+        (
+            uint256 id,
+            string memory name,
+            string memory ipfsHash,
+            bool exists,
+            uint256 payout,
+            uint8 correctAnswer
+        ) = educationHub.modules(0);
         assertEq(id, 0);
         assertEq(name, "Intro to DAO");
         assertEq(ipfsHash, "ipfsHash1");
@@ -219,7 +299,7 @@ contract ParticipationOrgTest is Test {
         vm.prank(executive);
         educationHub.removeModule(0);
 
-        (,,, bool moduleExists,,) = educationHub.modules(0);
+        (, , , bool moduleExists, , ) = educationHub.modules(0);
         assertFalse(moduleExists);
     }
 }

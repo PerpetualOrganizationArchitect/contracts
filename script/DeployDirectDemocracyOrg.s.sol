@@ -52,18 +52,18 @@ contract DeployDirectDemocracyOrg {
         params.contractNames[3] = "Treasury";
         params.contractNames[4] = "DirectDemocracyVoting";
         params.contractNames[5] = "TaskManager";
-        params.contractNames[6] = "QuickJoin";
 
         // Add ElectionContract if electionEnabled is true
-        uint256 nextIndex = 7;
+        uint256 nextIndex = 6;
         if (electionEnabled) {
             params.contractNames[nextIndex++] = "ElectionContract";
         }
 
         // Add EducationHub if educationHubEnabled is true
         if (educationHubEnabled) {
-            params.contractNames[nextIndex] = "EducationHub";
+            params.contractNames[nextIndex++] = "EducationHub";
         }
+        params.contractNames[nextIndex] = "QuickJoin";
 
         // Deploy the organization and return the registry address
         address registryAddress = masterFactory.deployAll(params);
