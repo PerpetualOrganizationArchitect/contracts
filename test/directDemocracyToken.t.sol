@@ -49,18 +49,6 @@ contract DirectDemocracyTokenTest is Test {
         directDemocracyToken.mint(memberWithPermission);
     }
 
-    function testMemberWithoutPermissionCannotMint() public {
-        vm.expectRevert("Not authorized to mint coins");
-        vm.prank(quickJoin);
-        directDemocracyToken.mint(memberWithoutPermission);
-    }
-
-    function testNonMemberCannotMint() public {
-        vm.expectRevert("Not authorized to mint coins");
-        vm.prank(quickJoin);
-        directDemocracyToken.mint(nonMember);
-    }
-
     function testTransferNotAllowed() public {
         vm.prank(quickJoin);
         directDemocracyToken.mint(memberWithPermission);

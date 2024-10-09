@@ -13,7 +13,6 @@ import "./TaskManagerFactory.sol";
 import "./QuickJoinFactory.sol";
 import "./ElectionContractFactory.sol";
 import "./EducationHubFactory.sol";
-// chnaged name
 
 contract MasterFactory {
     event DeployParamsLog(
@@ -61,7 +60,7 @@ contract MasterFactory {
         uint256 quorumPercentagePV;
         string username;
         bool electionEnabled;
-        bool educationHubEnabled; // Added this field
+        bool educationHubEnabled;
     }
 
     constructor(
@@ -142,9 +141,10 @@ contract MasterFactory {
             );
         }
 
-        contractAddresses[contractIndex++] = taskManagerFactory.createTaskManager(
+        address taskManagerAddress = taskManagerFactory.createTaskManager(
             contractAddresses[2], contractAddresses[0], params.executivePermissionNames, params.POname
         );
+        contractAddresses[contractIndex++] = taskManagerAddress;
 
         INFTMembership7 nftMembership = INFTMembership7(contractAddresses[0]);
 
@@ -173,18 +173,20 @@ contract MasterFactory {
         treasury.setVotingContract(votingControlAddress);
 
         IParticipationToken token = IParticipationToken(contractAddresses[2]);
-        token.setTaskManagerAddress(contractAddresses[contractIndex - 1]); // TaskManager should be the second to last deployed contract
+        token.setTaskManagerAddress(taskManagerAddress);
 
-        contractAddresses[contractIndex++] = quickJoinFactory.createQuickJoin(
+        address quickJoinAddress = quickJoinFactory.createQuickJoin(
             contractAddresses[0], contractAddresses[1], accountManagerAddress, params.POname, address(this)
         );
 
-        IQuickJoin quickJoin = IQuickJoin(contractAddresses[contractIndex - 1]);
+        contractAddresses[contractIndex++] = quickJoinAddress;
+
+        IQuickJoin quickJoin = IQuickJoin(quickJoinAddress);
 
         IDirectDemocracyToken2 directDemocracyToken = IDirectDemocracyToken2(contractAddresses[1]);
-        directDemocracyToken.setQuickJoin(contractAddresses[contractIndex - 1]);
+        directDemocracyToken.setQuickJoin(quickJoinAddress);
 
-        nftMembership.setQuickJoin(contractAddresses[contractIndex - 1]);
+        nftMembership.setQuickJoin(quickJoinAddress);
 
         if (bytes(params.username).length > 0) {
             quickJoin.quickJoinNoUserMasterDeploy(params.username, msg.sender);
