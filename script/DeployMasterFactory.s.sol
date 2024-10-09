@@ -15,13 +15,17 @@ import "../src/QuickJoinFactory.sol";
 import "../src/MasterDeployFactory.sol";
 import "../src/UniversalAccountRegistry.sol";
 import "../src/ElectionContractFactory.sol";
-import "../src/EducationHubFactory.sol"; // Import EducationHubFactory
+import "../src/EducationHubFactory.sol";
 
 contract DeployMasterFactory is Script {
+    address public accountManagerAddress;
+
     function run() external returns (address masterFactoryAddress) {
         vm.startBroadcast();
 
         AccountManager accountManager = new AccountManager();
+        accountManagerAddress = address(accountManager);
+
         DirectDemocracyVotingFactory directDemocracyVotingFactory = new DirectDemocracyVotingFactory();
         DirectDemocracyTokenFactory directDemocracyTokenFactory = new DirectDemocracyTokenFactory();
         HybridVotingFactory hybridVotingFactory = new HybridVotingFactory();
@@ -33,7 +37,7 @@ contract DeployMasterFactory is Script {
         TaskManagerFactory taskManagerFactory = new TaskManagerFactory();
         QuickJoinFactory quickJoinFactory = new QuickJoinFactory();
         ElectionContractFactory electionContractFactory = new ElectionContractFactory();
-        EducationHubFactory educationHubFactory = new EducationHubFactory(); // Instantiate EducationHubFactory
+        EducationHubFactory educationHubFactory = new EducationHubFactory();
 
         MasterFactory masterFactory = new MasterFactory(
             address(directDemocracyTokenFactory),
@@ -48,12 +52,11 @@ contract DeployMasterFactory is Script {
             address(quickJoinFactory),
             address(accountManager),
             address(electionContractFactory),
-            address(educationHubFactory) // Pass EducationHubFactory address to the MasterFactory constructor
+            address(educationHubFactory)
         );
 
         vm.stopBroadcast();
 
-        // Return the master factory address
         return address(masterFactory);
     }
 }
