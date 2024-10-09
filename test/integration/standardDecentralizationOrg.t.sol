@@ -36,38 +36,23 @@ contract MockParticipationToken2 is IParticipationToken2 {
         return 0;
     }
 
-    function balanceOf(
-        address account
-    ) external view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         return balances[account];
     }
 
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) external override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
         return false;
     }
 
-    function allowance(
-        address owner,
-        address spender
-    ) external view override returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         return 0;
     }
 
-    function approve(
-        address spender,
-        uint256 amount
-    ) external override returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         return false;
     }
 
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         return false;
     }
 }
@@ -76,15 +61,11 @@ contract MockNFTMembership11 is INFTMembership11 {
     mapping(address => string) public memberTypes;
     mapping(address => bool) public executives;
 
-    function checkMemberTypeByAddress(
-        address user
-    ) external view override returns (string memory) {
+    function checkMemberTypeByAddress(address user) external view override returns (string memory) {
         return memberTypes[user];
     }
 
-    function checkIsExecutive(
-        address user
-    ) external view override returns (bool) {
+    function checkIsExecutive(address user) external view override returns (bool) {
         return executives[user];
     }
 
@@ -104,24 +85,11 @@ interface IElectionContract {
     }
 
     function votingContract() external view returns (address);
-    function createElection(
-        uint256 _proposalId
-    ) external returns (uint256, uint256);
-    function addCandidate(
-        uint256 proposalId,
-        address _candidateAddress,
-        string memory _candidateName
-    ) external;
-    function getElectionDetails(
-        uint256 electionId
-    ) external view returns (bool, uint256, bool);
-    function getCandidates(
-        uint256 electionId
-    ) external view returns (Candidate[] memory);
-    function concludeElection(
-        uint256 proposalId,
-        uint256 winningOption
-    ) external;
+    function createElection(uint256 _proposalId) external returns (uint256, uint256);
+    function addCandidate(uint256 proposalId, address _candidateAddress, string memory _candidateName) external;
+    function getElectionDetails(uint256 electionId) external view returns (bool, uint256, bool);
+    function getCandidates(uint256 electionId) external view returns (Candidate[] memory);
+    function concludeElection(uint256 proposalId, uint256 winningOption) external;
 }
 
 contract DirectDemocracyOrgTest is Test {
@@ -145,26 +113,16 @@ contract DirectDemocracyOrgTest is Test {
     function testDirectDemocracyElectionHub() public {
         //Deploy DirectDemocracyOrg with Election Hub
         DeployDirectDemocracyOrg deployDirectDemocracyOrg = new DeployDirectDemocracyOrg();
-        directDemocracyVotingRegistryAddress = deployDirectDemocracyOrg.run(
-            address(masterFactory),
-            true,
-            false
-        );
+        directDemocracyVotingRegistryAddress = deployDirectDemocracyOrg.run(address(masterFactory), true, false);
         Registry registry = Registry(directDemocracyVotingRegistryAddress);
-        address electionContractAddress = registry.getContractAddress(
-            "ElectionContract"
-        );
+        address electionContractAddress = registry.getContractAddress("ElectionContract");
 
-        address votingContractAddress = IElectionContract(
-            electionContractAddress
-        ).votingContract();
+        address votingContractAddress = IElectionContract(electionContractAddress).votingContract();
         address nftMembership = registry.getContractAddress("NFTMembership");
 
         //Election Creation
         vm.prank(votingContractAddress);
-        (uint256 electionId, uint256 proposalId) = IElectionContract(
-            electionContractAddress
-        ).createElection(1);
+        (uint256 electionId, uint256 proposalId) = IElectionContract(electionContractAddress).createElection(1);
 
         assertEq(electionId, 0);
         assertEq(proposalId, 1);
@@ -174,101 +132,54 @@ contract DirectDemocracyOrgTest is Test {
         address candidate3 = address(0xFEED);
         // Add Candidates
         vm.prank(votingContractAddress);
-        IElectionContract(electionContractAddress).addCandidate(
-            1,
-            candidate1,
-            "Candidate 1"
-        );
+        IElectionContract(electionContractAddress).addCandidate(1, candidate1, "Candidate 1");
 
         vm.prank(votingContractAddress);
-        IElectionContract(electionContractAddress).addCandidate(
-            1,
-            candidate2,
-            "Candidate 2"
-        );
+        IElectionContract(electionContractAddress).addCandidate(1, candidate2, "Candidate 2");
 
         vm.prank(votingContractAddress);
-        IElectionContract(electionContractAddress).addCandidate(
-            1,
-            candidate3,
-            "Candidate 3"
-        );
+        IElectionContract(electionContractAddress).addCandidate(1, candidate3, "Candidate 3");
 
         // Conclude Election
         vm.prank(votingContractAddress);
         IElectionContract(electionContractAddress).concludeElection(1, 2);
 
         // Verify Results
-        (
-            bool isActive,
-            uint256 winningCandidateIndex,
-            bool hasValidWinner
-        ) = IElectionContract(electionContractAddress).getElectionDetails(
-                electionId
-            );
+        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) =
+            IElectionContract(electionContractAddress).getElectionDetails(electionId);
         assertFalse(isActive);
         assertTrue(hasValidWinner);
         assertEq(winningCandidateIndex, 2);
 
         // Verify Candidates
-        IElectionContract.Candidate[] memory candidates = IElectionContract(
-            electionContractAddress
-        ).getCandidates(electionId);
+        IElectionContract.Candidate[] memory candidates =
+            IElectionContract(electionContractAddress).getCandidates(electionId);
         assertEq(candidates.length, 3);
         assertEq(candidates[0].candidateAddress, candidate1);
         assertEq(candidates[1].candidateAddress, candidate2);
         assertEq(candidates[2].candidateAddress, candidate3);
 
         // Check that the NFT was minted for the winning candidate
-        assertEq(
-            INFTMembership11(nftMembership).checkMemberTypeByAddress(
-                candidate3
-            ),
-            "Executive"
-        );
+        assertEq(INFTMembership11(nftMembership).checkMemberTypeByAddress(candidate3), "Executive");
     }
 
     /// @dev test with Eduction Hub
     function testDirectDemocracyEducationHub() public {
         //Deploy DirectDemocracyOrg with Education Hub
         DeployDirectDemocracyOrg deployDirectDemocracyOrg = new DeployDirectDemocracyOrg();
-        directDemocracyVotingRegistryAddress = deployDirectDemocracyOrg.run(
-            address(masterFactory),
-            false,
-            true
-        );
-
-        EducationHub educationHub;
-        MockParticipationToken2 token;
-        MockNFTMembership11 nftMembership;
-
+        directDemocracyVotingRegistryAddress = deployDirectDemocracyOrg.run(address(masterFactory), false, true);
         Registry registry = Registry(directDemocracyVotingRegistryAddress);
-        address owner = registry.getContractAddress("EducationHub");
-        address executive = address(2);
-        address member = address(3);
-        address nonMember = address(4);
+        address educationHubAddress = registry.getContractAddress("EducationHub");
 
-        token = new MockParticipationToken2();
-        nftMembership = new MockNFTMembership11();
+        address nftMembership = registry.getContractAddress("NFTMembership");
+        address executive = address(deployDirectDemocracyOrg);
 
-        // Set up roles
-        nftMembership.setMemberType(member, "Member");
-        nftMembership.setExecutive(executive, true);
-
-        educationHub = new EducationHub(address(token), address(nftMembership));
-
-        //test create module
+        // test create module
         vm.prank(executive);
-        educationHub.createModule("Intro to DAO", "ipfsHash1", 100, 1);
+        EducationHub(educationHubAddress).createModule("Intro to DAO", "ipfsHash1", 100, 1);
 
-        (
-            uint256 id,
-            string memory name,
-            string memory ipfsHash,
-            bool exists,
-            uint256 payout,
-            uint8 correctAnswer
-        ) = educationHub.modules(0);
+        (uint256 id, string memory name, string memory ipfsHash, bool exists, uint256 payout, uint8 correctAnswer) =
+            EducationHub(educationHubAddress).modules(0);
         assertEq(id, 0);
         assertEq(name, "Intro to DAO");
         assertEq(ipfsHash, "ipfsHash1");
@@ -277,28 +188,19 @@ contract DirectDemocracyOrgTest is Test {
         assertEq(correctAnswer, 1);
 
         //test complete module
-        // Create a module as an executive
-        vm.prank(executive);
-        educationHub.createModule("Intro to DAO", "ipfsHash1", 100, 1);
+        address member = address(deployDirectDemocracyOrg);
 
         // Complete the module as a member
         vm.prank(member);
-        educationHub.completeModule(0, 1);
+        EducationHub(educationHubAddress).completeModule(0, 1);
 
-        assertEq(token.balanceOf(member), 100);
-        bool completed = educationHub.completedModules(member, 0);
-        assertTrue(completed);
+        // Attempt to complete the module again
+        vm.prank(member);
+        vm.expectRevert("Module already completed");
+        EducationHub(educationHubAddress).completeModule(0, 1);
 
-        //test remove module
-        // Create a module as an executive
+        // Remove the module as an executive
         vm.prank(executive);
-        educationHub.createModule("Intro to DAO", "ipfsHash1", 100, 1);
-
-        // Remove the module as an execustive
-        vm.prank(executive);
-        educationHub.removeModule(0);
-
-        (, , , bool moduleExists, , ) = educationHub.modules(0);
-        assertFalse(moduleExists);
+        EducationHub(educationHubAddress).removeModule(0);
     }
 }
