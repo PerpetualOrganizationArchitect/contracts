@@ -117,93 +117,60 @@ contract HybridOrgTest is Test {
      */
 
     /// @dev test with Election Hub
-    // function testHybridElectionHub() public {
-    //     //Deploy HybridOrg with Election Hub
-    //     DeployHybridOrg deployHybridOrg = new DeployHybridOrg();
-    //     hybridVotingRegistryAddress = deployHybridOrg.run(
-    //         address(masterFactory),
-    //         true,
-    //         false
-    //     );
-    //     Registry registry = Registry(hybridVotingRegistryAddress);
-    //     address electionContractAddress = registry.getContractAddress(
-    //         "ElectionContract"
-    //     );
+    function testHybridElectionHub() public {
+        //Deploy HybridOrg with Election Hub
+        DeployHybridOrg deployHybridOrg = new DeployHybridOrg();
+        hybridVotingRegistryAddress = deployHybridOrg.run(address(masterFactory), true, false);
+        Registry registry = Registry(hybridVotingRegistryAddress);
+        address electionContractAddress = registry.getContractAddress("ElectionContract");
 
-    //     address votingContractAddress = IElectionContract(
-    //         electionContractAddress
-    //     ).votingContract();
-    //     address nftMembership = registry.getContractAddress("NFTMembership");
+        address votingContractAddress = IElectionContract(electionContractAddress).votingContract();
+        address nftMembership = registry.getContractAddress("NFTMembership");
 
-    //     //Election Creation
-    //     vm.prank(votingContractAddress);
-    //     (uint256 electionId, uint256 proposalId) = IElectionContract(
-    //         electionContractAddress
-    //     ).createElection(1);
+        //Election Creation
+        vm.prank(votingContractAddress);
+        (uint256 electionId, uint256 proposalId) = IElectionContract(electionContractAddress).createElection(1);
 
-    //     assertEq(electionId, 0);
-    //     assertEq(proposalId, 1);
+        assertEq(electionId, 0);
+        assertEq(proposalId, 1);
 
-    //     address candidate1 = address(0xDEAD);
-    //     address candidate2 = address(0xBEEF);
-    //     address candidate3 = address(0xFEED);
-    //     console.log("Test Voting Contract Address");
-    //     console.logAddress(votingContractAddress);
-    //     // Add Candidates
-    //     vm.prank(votingContractAddress);
-    //     IElectionContract(electionContractAddress).addCandidate(
-    //         1,
-    //         candidate1,
-    //         "Candidate 1"
-    //     );
+        address candidate1 = address(0xDEAD);
+        address candidate2 = address(0xBEEF);
+        address candidate3 = address(0xFEED);
+        console.log("Test Voting Contract Address");
+        console.logAddress(votingContractAddress);
+        // Add Candidates
+        vm.prank(votingContractAddress);
+        IElectionContract(electionContractAddress).addCandidate(1, candidate1, "Candidate 1");
 
-    //     vm.prank(votingContractAddress);
-    //     IElectionContract(electionContractAddress).addCandidate(
-    //         1,
-    //         candidate2,
-    //         "Candidate 2"
-    //     );
+        vm.prank(votingContractAddress);
+        IElectionContract(electionContractAddress).addCandidate(1, candidate2, "Candidate 2");
 
-    //     vm.prank(votingContractAddress);
-    //     IElectionContract(electionContractAddress).addCandidate(
-    //         1,
-    //         candidate3,
-    //         "Candidate 3"
-    //     );
+        vm.prank(votingContractAddress);
+        IElectionContract(electionContractAddress).addCandidate(1, candidate3, "Candidate 3");
 
-    //     // Conclude Election
-    //     vm.prank(votingContractAddress);
-    //     IElectionContract(electionContractAddress).concludeElection(1, 2);
+        // Conclude Election
+        vm.prank(votingContractAddress);
+        IElectionContract(electionContractAddress).concludeElection(1, 2);
 
-    //     // Verify Results
-    //     (
-    //         bool isActive,
-    //         uint256 winningCandidateIndex,
-    //         bool hasValidWinner
-    //     ) = IElectionContract(electionContractAddress).getElectionDetails(
-    //             electionId
-    //         );
-    //     assertFalse(isActive);
-    //     assertTrue(hasValidWinner);
-    //     assertEq(winningCandidateIndex, 2);
+        // Verify Results
+        (bool isActive, uint256 winningCandidateIndex, bool hasValidWinner) =
+            IElectionContract(electionContractAddress).getElectionDetails(electionId);
+        assertFalse(isActive);
+        assertTrue(hasValidWinner);
+        assertEq(winningCandidateIndex, 2);
 
-    //     // Verify Candidates
-    //     IElectionContract.Candidate[] memory candidates = IElectionContract(
-    //         electionContractAddress
-    //     ).getCandidates(electionId);
-    //     assertEq(candidates.length, 3);
-    //     assertEq(candidates[0].candidateAddress, candidate1);
-    //     assertEq(candidates[1].candidateAddress, candidate2);
-    //     assertEq(candidates[2].candidateAddress, candidate3);
+        // Verify Candidates
+        IElectionContract.Candidate[] memory candidates =
+            IElectionContract(electionContractAddress).getCandidates(electionId);
+        assertEq(candidates.length, 3);
+        assertEq(candidates[0].candidateAddress, candidate1);
+        assertEq(candidates[1].candidateAddress, candidate2);
+        assertEq(candidates[2].candidateAddress, candidate3);
 
-    //     // Check that the NFT was minted for the winning candidate
-    //     assertEq(
-    //         INFTMembership11(nftMembership).checkMemberTypeByAddress(
-    //             candidate3
-    //         ),
-    //         "Executive"
-    //     );
-    // }
+        // Check that the NFT was minted for the winning candidate
+        assertEq(INFTMembership11(nftMembership).checkMemberTypeByAddress(candidate3), "Executive");
+    }
 
     /// @dev test with Eduction Hub
     function testHybridEducationHub() public {
